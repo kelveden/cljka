@@ -1,0 +1,15 @@
+{:aliases
+ {:outdated {:deps      {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+             :main-opts ["-m" "antq.core"]}
+  :lint     {:replace-deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}
+             :main-opts    ["-m" "clj-kondo.main" "--lint" "src"]}
+  :test     {:extra-deps  {lambdaisland/kaocha {:mvn/version "1.85.1342"}}
+             :main-opts   ["-m" "kaocha.runner"]
+             :extra-paths ["test"]}}
+
+ :paths ["src"]
+
+ :deps  {org.apache.kafka/kafka-clients {:mvn/version "3.5.1"}
+         cheshire/cheshire              {:mvn/version "5.11.0"}
+         org.clojure/clojure            {:mvn/version "1.11.1"}
+         org.clojure/core.async         {:mvn/version "1.6.681"}}}
