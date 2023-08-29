@@ -12,4 +12,5 @@
  :deps  {org.apache.kafka/kafka-clients {:mvn/version "3.5.1"}
          cheshire/cheshire              {:mvn/version "5.11.0"}
          org.clojure/clojure            {:mvn/version "1.11.1"}
-         org.clojure/core.async         {:mvn/version "1.6.681"}}}
+         org.clojure/core.async         {:mvn/version "1.6.681"}
+         org.clojure/tools.logging      {:mvn/version "1.2.4"}}}
