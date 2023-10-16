@@ -3,8 +3,8 @@
             [clojure.core.async.impl.protocols :as async-protocols]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [clojure.tools.logging :as log]
-            [clojure.pprint :refer [pprint]])
+            [clojure.pprint :refer [pprint]]
+            [taoensso.timbre :as log])
   (:import (clojure.lang Atom)
            (java.io Writer File)))
 
