@@ -1,26 +1,12 @@
 (ns cljka.channel-test
   (:require [clojure.core.async.impl.protocols :as async-protocols]
-            [clojure.java.io :as io]
             [clojure.test :refer :all]
             [clojure.core.async :as async]
             [cljka.channel :as channel]
-            [clojure.string :refer [join]])
+            [clojure.string :refer [join]]
+            [cljka.test-utils :refer [is-eventually? is-never?]])
   (:import (java.io File StringWriter)
            (java.util UUID)))
-
-(defmacro is-eventually?
-  [& body]
-  `(do (let [fut# (future (while (not ~@body)
-                            (Thread/sleep 100)))]
-         (deref fut# 1000 nil))
-       (is ~@body)))
-
-(defmacro is-never?
-  [& body]
-  `(do (let [fut# (future (while (not ~@body)
-                            (Thread/sleep 100)))]
-         (deref fut# 1000 nil))
-       (is (not ~@body))))
 
 (deftest closed?-returns-true-if-channel-closed
   (let [ch (async/chan)]
