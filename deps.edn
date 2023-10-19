@@ -21,11 +21,12 @@
 
  :deps  {org.apache.kafka/kafka-clients {:mvn/version "3.6.0"}
          cheshire/cheshire              {:mvn/version "5.11.0"}
+         com.fzakaria/slf4j-timbre      {:mvn/version "0.4.0"}
+         com.taoensso/timbre            {:mvn/version "6.3.1"}
          org.clojure/clojure            {:mvn/version "1.11.1"}
          org.clojure/core.async         {:mvn/version "1.6.681"}
          org.slf4j/jcl-over-slf4j       {:mvn/version "2.0.7"}
          org.slf4j/jul-to-slf4j         {:mvn/version "2.0.7"}
          org.slf4j/log4j-over-slf4j     {:mvn/version "2.0.7"}
          org.slf4j/slf4j-api            {:mvn/version "2.0.7"}
-         com.taoensso/timbre            {:mvn/version "6.3.1"}
-         com.fzakaria/slf4j-timbre      {:mvn/version "0.4.0"}}}
+         tick/tick                      {:mvn/version "0.7.5"}}}

@@ -1,7 +1,8 @@
 (ns cljka.kafka
   (:require [cljka.config :refer [normalize-kafka-config]])
   (:import (java.util HashMap)
-           (org.apache.kafka.clients.admin AdminClient)))
+           (org.apache.kafka.clients.admin AdminClient OffsetSpec)
+           (org.apache.kafka.common TopicPartition)))
 
 ; TODO: move to core namespace along with all other configuration merging logic
 (defn ->topic-name
@@ -17,10 +18,14 @@
       (AdminClient/create)))
 
 (defn- wait-for-kafka-future
-  [f]
-  (deref f 3000 nil))
+  [fut]
+  (deref fut 3000 nil))
 
-(defn get-topic-partitions
+(defn- sort-kvs
+  [kvs]
+  (sort-by first kvs))
+
+(defn get-partitions
   "Gets a vector of partitions available for the given topic."
   [^AdminClient kafka-admin-client topic]
   (let [[_ fut] (-> (.describeTopics kafka-admin-client [topic])
@@ -46,7 +51,26 @@
                      {})
              ; Ensure that the partition/offset pairs are sorted by partition
              (map (fn [[topic partition-offsets]]
-                    [topic (->> partition-offsets
-                                (sort-by first)
-                                (vec))]))
+                    [topic (vec (sort-kvs partition-offsets))]))
              (into {}))))
+
+(defn get-offsets-at
+  "Gets the latest offsets for the given topic partitions at the specified point in time.
+
+  'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
+  [^AdminClient kafka-admin-client topic at]
+  (let [partitions  (get-partitions kafka-admin-client topic)
+        offset-spec (case at
+                      :start (OffsetSpec/earliest)
+                      :end (OffsetSpec/latest)
+                      (OffsetSpec/forTimestamp at))
+        tp->os      (->> partitions
+                         (map (fn [p] [(TopicPartition. topic p) offset-spec]))
+                         (into {}))
+        fut         (-> (.listOffsets kafka-admin-client tp->os)
+                        (.all))]
+    (some->> (wait-for-kafka-future fut)
+             (map (fn [[tp lori]]
+                    [(.partition tp) (.offset lori)]))
+             (sort-kvs)
+             (vec))))

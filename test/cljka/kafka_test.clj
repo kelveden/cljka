@@ -3,7 +3,8 @@
             [cljka.kafka :as kafka]
             [cljka.test-utils :refer [*kafka-admin-client* ensure-topic! produce! with-consumer with-kafka with-producer]]
             [clojure.test :refer :all]
-            [taoensso.timbre :as log])
+            [taoensso.timbre :as log]
+            [tick.core :as t])
   (:import (java.time Duration)
            (java.util UUID)
            (org.apache.kafka.clients.consumer KafkaConsumer)
@@ -37,7 +38,7 @@
     (ensure-topic! topic 6)
 
     (is (= [0 1 2 3 4 5]
-           (kafka/get-topic-partitions *kafka-admin-client* topic)))))
+           (kafka/get-partitions *kafka-admin-client* topic)))))
 
 (deftest get-consumer-group-offsets-gets-offsets-by-topic
   ; GIVEN two topics
@@ -76,3 +77,62 @@
 (deftest get-consumer-group-offsets-returns-empty-map-if-consumer-group-unassigned
   (let [consumer-group (str (UUID/randomUUID))]
     (is (= {} (kafka/get-group-offsets *kafka-admin-client* consumer-group)))))
+
+(deftest can-get-topic-starting-offsets
+  ; GIVEN a topic
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 2]
+    (ensure-topic! topic partition-count)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (doall (repeatedly 10 #(produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+
+    ; WHEN the start offsets of the topic are requested
+    (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic :start)]
+      ; THEN the offsets for all partitions are 0
+      (is (= (->> (range partition-count)
+                  (map #(vector % 0))
+                  (vec))
+             topic-offsets)))))
+
+(deftest can-get-topic-end-offsets
+  ; GIVEN a topic
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 2]
+    (ensure-topic! topic partition-count)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (doall (repeatedly 10 #(produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+
+    ; WHEN the end offsets of the topic are requested
+    (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic :end)]
+      ; THEN the offsets add up to the total number of messages
+      (is (= partition-count (count topic-offsets)))
+      (is (= 10 (->> topic-offsets (map second) (reduce +)))))))
+
+(deftest can-get-topic-offsets-at-specific-time
+  ; GIVEN a topic with a single partition
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 1]
+    (ensure-topic! topic partition-count)
+
+    (with-producer
+      (fn [producer]
+        (let [start (.toEpochMilli (t/instant))]
+          ; AND 2 messages on the topic, produced 500ms apart from now.
+          (produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))
+          (Thread/sleep 500)
+          (produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))
+
+          ; WHEN the offset of the topic is requested at a time that should be BEFORE the message has been produced.
+          (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic 0)]
+            ; THEN the offset will be 0
+            (is (= [[0 0]] topic-offsets)))
+
+          ; AND WHEN the offset of the topic is requested at a time that should be AFTER the 1st message has been produced (but before the second).
+          (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic (+ start 300))]
+            ; THEN the offset will be 1 - i.e. the earliest offset with a timestamp greater than "at"
+            (is (= [[0 1]] topic-offsets))))))))
+
