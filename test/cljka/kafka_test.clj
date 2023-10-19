@@ -1,9 +1,9 @@
 (ns cljka.kafka-test
-  (:require [clojure.test :refer :all]
+  (:require [cljka.deserialization]
             [cljka.kafka :as kafka]
-            [taoensso.timbre :as log]
-            [cljka.test-utils :refer [with-kafka ensure-topic! *kafka-admin-client* with-consumer with-producer produce!]]
-            [cljka.deserialization])
+            [cljka.test-utils :refer [*kafka-admin-client* ensure-topic! produce! with-consumer with-kafka with-producer]]
+            [clojure.test :refer :all]
+            [taoensso.timbre :as log])
   (:import (java.time Duration)
            (java.util UUID)
            (org.apache.kafka.clients.consumer KafkaConsumer)

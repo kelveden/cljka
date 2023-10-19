@@ -8,5 +8,5 @@ test:
 	@clj -M:test
 
 lint:
-	@clj -M:nsorg
+	@clj -M:organise-namespaces
 	@clj -M:lint

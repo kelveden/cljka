@@ -2,11 +2,11 @@
   (:require [clojure.core.async :as async]
             [clojure.core.async.impl.protocols :as async-protocols]
             [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
             [clojure.pprint :refer [pprint]]
+            [clojure.spec.alpha :as s]
             [taoensso.timbre :as log])
   (:import (clojure.lang Atom)
-           (java.io Writer File)))
+           (java.io File Writer)))
 
 (s/def ::channel #(satisfies? async-protocols/Channel %))
 

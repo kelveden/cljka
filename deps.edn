@@ -13,9 +13,9 @@
    :main-opts   ["-m" "kaocha.runner"]
    :extra-paths ["test"]}
 
-  :nsorg
+  :organise-namespaces
   {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
-   :main-opts  ["-m" "nsorg.cli"]}}
+   :main-opts  ["-m" "nsorg.cli" "-e" "src" "test"]}}
 
  :paths ["src"]
 

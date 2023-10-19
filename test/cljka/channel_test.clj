@@ -1,10 +1,10 @@
 (ns cljka.channel-test
-  (:require [clojure.core.async.impl.protocols :as async-protocols]
-            [clojure.test :refer :all]
+  (:require [cljka.channel :as channel]
+            [cljka.test-utils :refer [is-eventually? is-never?]]
             [clojure.core.async :as async]
-            [cljka.channel :as channel]
+            [clojure.core.async.impl.protocols :as async-protocols]
             [clojure.string :refer [join]]
-            [cljka.test-utils :refer [is-eventually? is-never?]])
+            [clojure.test :refer :all])
   (:import (java.io File StringWriter)
            (java.util UUID)))
 

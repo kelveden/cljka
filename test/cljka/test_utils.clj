@@ -1,10 +1,10 @@
 (ns cljka.test-utils
-  (:require [cljka.kafka :as kafka]
-            [clojure.test :refer :all]
+  (:require [cljka.config :refer [normalize-kafka-config]]
+            [cljka.deserialization]
+            [cljka.kafka :as kafka]
             [clojure.string]
-            [taoensso.timbre :as log]
-            [cljka.config :refer [normalize-kafka-config]]
-            [cljka.deserialization])
+            [clojure.test :refer :all]
+            [taoensso.timbre :as log])
   (:import (cljka.deserialization NoopDeserializer)
            (java.time Duration)
            (java.util HashMap UUID)
