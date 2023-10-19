@@ -1,12 +1,21 @@
 {:aliases
- {:outdated {:deps      {com.github.liquidz/antq {:mvn/version "RELEASE"}}
-             :main-opts ["-m" "antq.core"]}
-  :lint     {:replace-deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}
-             :main-opts    ["-m" "clj-kondo.main" "--lint" "src"]}
-  :test     {:extra-deps  {lambdaisland/kaocha      {:mvn/version "1.86.1355"}
-                           org.testcontainers/kafka {:mvn/version "1.19.1"}}
-             :main-opts   ["-m" "kaocha.runner"]
-             :extra-paths ["test"]}}
+ {:outdated
+  {:deps      {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+   :main-opts ["-m" "antq.core"]}
+
+  :lint
+  {:extra-deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}
+   :main-opts  ["-m" "clj-kondo.main" "--lint" "src"]}
+
+  :test
+  {:extra-deps  {lambdaisland/kaocha      {:mvn/version "1.86.1355"}
+                 org.testcontainers/kafka {:mvn/version "1.19.1"}}
+   :main-opts   ["-m" "kaocha.runner"]
+   :extra-paths ["test"]}
+
+  :nsorg
+  {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
+   :main-opts  ["-m" "nsorg.cli"]}}
 
  :paths ["src"]
 

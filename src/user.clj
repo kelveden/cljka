@@ -1,6 +1,5 @@
 (ns user
-  (:require [cljka.kafka :as kafka]
-            [cljka.config :refer [load-config]]
+  (:require [cljka.config :refer [load-config]]
             [clojure.repl :refer [dir-fn]]))
 
 ;
