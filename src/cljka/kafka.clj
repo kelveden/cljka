@@ -74,3 +74,18 @@
                     [(.partition tp) (.offset lori)]))
              (sort-kvs)
              (vec))))
+
+(defn get-lag
+  "Gets the lag for the specified consumer group on the specified topic."
+  [^AdminClient kafka-admin-client topic group-id]
+  (let [all-group-offsets (get-group-offsets kafka-admin-client group-id)
+        latest-offsets    (get-offsets-at kafka-admin-client topic :end)]
+    (if-let [topic-group-offsets (get all-group-offsets topic)]
+      (let [by-partition (-> (map (fn [[partition group-offset] [_ latest-offset]]
+                                    [partition (- latest-offset group-offset)])
+                                  topic-group-offsets latest-offsets)
+                             (vec))
+            total        (->> by-partition (map second) (reduce +))]
+        {:total      total
+         :partitions by-partition})
+      :no-lag-data)))
