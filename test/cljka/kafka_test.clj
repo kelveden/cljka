@@ -77,21 +77,20 @@
                      (.subscribe consumer [topic1 topic2])
                      (doall (repeatedly 5 #(.poll consumer (Duration/ofSeconds 1))))))
 
-    (let [group-offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
+    (let [group-offsets-topic1 (kafka/get-group-offsets *kafka-admin-client* topic1 consumer-group)
+          group-offsets-topic2 (kafka/get-group-offsets *kafka-admin-client* topic2 consumer-group)]
       ; THEN each topic has an entry per partition, ordered by partition
-      (is (= [0 1 2 3] (vec (map first (-> group-offsets (get topic1))))))
-      (is (= [0 1] (vec (map first (-> group-offsets (get topic2))))))
+      (is (= [0 1 2 3] (vec (map first group-offsets-topic1))))
+      (is (= [0 1] (vec (map first group-offsets-topic2))))
 
       ; AND each topic's offsets add up to the number of messages consumed by the consumer
-      (let [topic-offsets (get group-offsets topic1)]
-        (is (= 5 (reduce + (map second topic-offsets)))))
+      (is (= 5 (reduce + (map second group-offsets-topic1))))
+      (is (= 5 (reduce + (map second group-offsets-topic2)))))))
 
-      (let [topic-offsets (get group-offsets topic2)]
-        (is (= 5 (reduce + (map second topic-offsets))))))))
-
-(deftest getting-group-offsets-returns-empty-map-if-consumer-group-unassigned
-  (let [consumer-group (str (UUID/randomUUID))]
-    (is (= {} (kafka/get-group-offsets *kafka-admin-client* consumer-group)))))
+(deftest getting-group-offsets-returns-empty-vector-if-consumer-group-unassigned
+  (let [topic          (str (UUID/randomUUID))
+        consumer-group (str (UUID/randomUUID))]
+    (is (= [] (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)))))
 
 
 ;------------------------------------------------
@@ -227,15 +226,15 @@
                      (.poll consumer (Duration/ofSeconds 1))))
 
     ; THEN the group offsets are at the end of topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
-      (is (= 100 (->> (get offsets topic) (map second) (reduce +)))))
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
+      (is (= 100 (->> offsets (map second) (reduce +)))))
 
     ; AND WHEN the consumer group offsets are reset to the start
     (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :start)
 
     ; THEN the group offsets output reflects the start of the topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
-      (is (= [[0 0] [1 0] [2 0] [3 0]] (->> offsets (map second) (reduce +)))))))
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
+      (is (= [[0 0] [1 0] [2 0] [3 0]] offsets)))))
 
 (deftest can-set-consumer-group-offsets-to-end-of-topic
   ; GIVEN a topic
@@ -260,8 +259,8 @@
                      (is (empty? (.poll consumer (Duration/ofSeconds 1))))))
 
     ; AND the group offsets are at the end of topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
-      (is (= 100 (->> (get offsets topic) (map second) (reduce +)))))))
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
+      (is (= 100 (->> offsets (map second) (reduce +)))))))
 
 (deftest can-set-consumer-group-offsets-to-specific-offset
   ; GIVEN a topic

@@ -38,22 +38,21 @@
              (vec))))
 
 (defn get-group-offsets
-  "Gets the offsets of the given consumer group."
-  [^AdminClient kafka-admin-client group-id]
+  "Gets the offsets of the given consumer group on the specified topic."
+  [^AdminClient kafka-admin-client topic group-id]
   (let [fut (-> (.listConsumerGroupOffsets kafka-admin-client ^String group-id)
                 (.partitionsToOffsetAndMetadata))]
     (some->> (wait-for-kafka-future fut)
              ; Convert to map of topic->vec of partition/offset pairs
              (reduce (fn [acc [topic-partition offset-metadata]]
-                       (let [topic     (.topic topic-partition)
-                             partition (.partition topic-partition)
-                             offset    (.offset offset-metadata)]
-                         (update acc topic conj [partition offset])))
-                     {})
-             ; Ensure that the partition/offset pairs are sorted by partition
-             (map (fn [[topic partition-offsets]]
-                    [topic (vec (sort-kvs partition-offsets))]))
-             (into {}))))
+                       (let [t (.topic topic-partition)
+                             p (.partition topic-partition)
+                             o (.offset offset-metadata)]
+                         (cond-> acc
+                                 (= topic t) (conj [p o]))))
+                     [])
+             (vec)
+             (sort-kvs))))
 
 (defn get-offsets-at
   "Gets the latest offsets for the given topic partitions at the specified point in time.
@@ -79,12 +78,12 @@
 (defn get-lag
   "Gets the lag for the specified consumer group on the specified topic."
   [^AdminClient kafka-admin-client topic group-id]
-  (let [all-group-offsets (get-group-offsets kafka-admin-client group-id)
-        latest-offsets    (get-offsets-at kafka-admin-client topic :end)]
-    (if-let [topic-group-offsets (get all-group-offsets topic)]
+  (let [group-offsets  (get-group-offsets kafka-admin-client topic group-id)
+        latest-offsets (get-offsets-at kafka-admin-client topic :end)]
+    (if (not-empty group-offsets)
       (let [by-partition (-> (map (fn [[partition group-offset] [_ latest-offset]]
                                     [partition (- latest-offset group-offset)])
-                                  topic-group-offsets latest-offsets)
+                                  group-offsets latest-offsets)
                              (vec))
             total        (->> by-partition (map second) (reduce +))]
         {:total      total
