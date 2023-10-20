@@ -2,6 +2,7 @@
   (:require [cljka.config :refer [normalize-kafka-config]])
   (:import (java.util HashMap)
            (org.apache.kafka.clients.admin AdminClient OffsetSpec)
+           (org.apache.kafka.clients.consumer OffsetAndMetadata)
            (org.apache.kafka.common TopicPartition)))
 
 ; TODO: move to core namespace along with all other configuration merging logic
@@ -89,3 +90,19 @@
         {:total      total
          :partitions by-partition})
       :no-lag-data)))
+
+(defn set-group-offsets!
+  "Sets the group offset on all partitions to the specified value.
+
+  offset can either be :start, :end or a number representing a specific offset"
+  [^AdminClient kafka-admin-client topic group-id offset]
+  (let [topic-offsets (if (keyword? offset)
+                        (get-offsets-at kafka-admin-client topic offset)
+                        (->> (get-partitions kafka-admin-client topic)
+                             (map #(vector % offset))))
+        tps->oam      (->> topic-offsets
+                           (map (fn [[p o]]
+                                  [(TopicPartition. topic p)
+                                   (OffsetAndMetadata. o)]))
+                           (into {}))]
+    (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))

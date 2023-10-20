@@ -202,3 +202,86 @@
 
     ; THEN the lag cannot be calculated because the consumer has not yet started consuming
     (is (= :no-lag-data (kafka/get-lag *kafka-admin-client* topic consumer-group)))))
+
+
+;------------------------------------------------
+(comment kafka/set-group-offsets!)
+;------------------------------------------------
+
+
+(deftest can-set-consumer-group-offsets-to-start-of-topic
+  ; GIVEN a topic
+  (let [topic          (str (UUID/randomUUID))
+        consumer-group (str (UUID/randomUUID))]
+    (ensure-topic! topic 4)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (doall (repeatedly 100 #(produce! producer topic
+                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+
+    ; WHEN a consumer starts consuming
+    (with-consumer StringDeserializer StringDeserializer consumer-group
+                   (fn [^KafkaConsumer consumer]
+                     (.subscribe consumer [topic])
+                     (.poll consumer (Duration/ofSeconds 1))))
+
+    ; THEN the group offsets are at the end of topic
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
+      (is (= 100 (->> (get offsets topic) (map second) (reduce +)))))
+
+    ; AND WHEN the consumer group offsets are reset to the start
+    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :start)
+
+    ; THEN the group offsets output reflects the start of the topic
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
+      (is (= [[0 0] [1 0] [2 0] [3 0]] (->> offsets (map second) (reduce +)))))))
+
+(deftest can-set-consumer-group-offsets-to-end-of-topic
+  ; GIVEN a topic
+  (let [topic          (str (UUID/randomUUID))
+        consumer-group (str (UUID/randomUUID))]
+    (ensure-topic! topic 4)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (doall (repeatedly 100 #(produce! producer topic
+                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+
+    ; WHEN the group offsets are set to the end of the topic
+    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :end)
+
+    ; AND a consumer starts consuming
+    (with-consumer StringDeserializer StringDeserializer consumer-group
+                   (fn [^KafkaConsumer consumer]
+                     (.subscribe consumer [topic])
+
+                     ; THEN no messages are retrieved
+                     (is (empty? (.poll consumer (Duration/ofSeconds 1))))))
+
+    ; AND the group offsets are at the end of topic
+    (let [offsets (kafka/get-group-offsets *kafka-admin-client* consumer-group)]
+      (is (= 100 (->> (get offsets topic) (map second) (reduce +)))))))
+
+(deftest can-set-consumer-group-offsets-to-specific-offset
+  ; GIVEN a topic
+  (let [topic          (str (UUID/randomUUID))
+        consumer-group (str (UUID/randomUUID))]
+    (ensure-topic! topic 4)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (doall (repeatedly 100 #(produce! producer topic
+                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+
+    ; WHEN the group offsets are set to the end of the topic
+    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group 10)
+
+    ; AND a consumer starts consuming
+    (with-consumer StringDeserializer StringDeserializer consumer-group
+                   (fn [^KafkaConsumer consumer]
+                     (.subscribe consumer [topic])
+
+                     ; THEN only those messages from after the offset are retrieved
+                     (is (= 60 (-> (.poll consumer (Duration/ofSeconds 1))
+                                   (.count))))))))
