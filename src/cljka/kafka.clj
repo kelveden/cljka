@@ -54,16 +54,20 @@
              (vec)
              (sort-kvs))))
 
+(defn- at->offset-spec
+  [at]
+  (case at
+    :start (OffsetSpec/earliest)
+    :end (OffsetSpec/latest)
+    (OffsetSpec/forTimestamp at)))
+
 (defn get-offsets-at
-  "Gets the latest offsets for the given topic partitions at the specified point in time.
+  "Gets the offsets for the given topic partitions at the specified point in time.
 
   'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
   [^AdminClient kafka-admin-client topic at]
   (let [partitions  (get-partitions kafka-admin-client topic)
-        offset-spec (case at
-                      :start (OffsetSpec/earliest)
-                      :end (OffsetSpec/latest)
-                      (OffsetSpec/forTimestamp at))
+        offset-spec (at->offset-spec at)
         tp->os      (->> partitions
                          (map (fn [p] [(TopicPartition. topic p) offset-spec]))
                          (into {}))
@@ -104,6 +108,21 @@
                                   [(TopicPartition. topic p)
                                    (OffsetAndMetadata. o)]))
                            (into {}))]
+    (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))
+
+(defn set-group-offset!
+  "Sets the group offset on a single partition to the specified value.
+
+  offset can either be :start, :end or a number representing a specific offset"
+  [^AdminClient kafka-admin-client topic partition group-id offset]
+  (let [o        (if (keyword? offset)
+                   (let [tp->os {(TopicPartition. topic partition) (at->offset-spec offset)}
+                         fut    (-> (.listOffsets kafka-admin-client tp->os)
+                                    (.partitionResult (TopicPartition. topic partition)))]
+                     (->> (wait-for-kafka-future fut)
+                          (.offset)))
+                   offset)
+        tps->oam {(TopicPartition. topic partition) (OffsetAndMetadata. o)}]
     (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))
 
 (defn get-topics
