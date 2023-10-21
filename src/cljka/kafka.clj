@@ -105,3 +105,12 @@
                                    (OffsetAndMetadata. o)]))
                            (into {}))]
     (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))
+
+(defn get-topics
+  "Gets a list o all topics."
+  [^AdminClient kafka-admin-client]
+  (-> (.listTopics kafka-admin-client)
+      (.names)
+      (wait-for-kafka-future)
+      (sort)
+      (vec)))

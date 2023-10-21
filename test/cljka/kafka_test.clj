@@ -2,6 +2,7 @@
   (:require [cljka.deserialization]
             [cljka.kafka :as kafka]
             [cljka.test-utils :refer [*kafka-admin-client* ensure-topic! produce! with-consumer with-kafka with-producer]]
+            [clojure.set :refer [subset?]]
             [clojure.test :refer :all]
             [taoensso.timbre :as log]
             [tick.core :as t])
@@ -284,3 +285,16 @@
                      ; THEN only those messages from after the offset are retrieved
                      (is (= 60 (-> (.poll consumer (Duration/ofSeconds 1))
                                    (.count))))))))
+
+
+;------------------------------------------------
+(comment kafka/get-topics)
+;------------------------------------------------
+
+
+(deftest can-get-topics
+  (let [topics (repeatedly 5 #(str (UUID/randomUUID)))]
+    (doseq [topic topics] (ensure-topic! topic 1))
+
+    (is (subset? (set topics)
+                 (set (kafka/get-topics *kafka-admin-client*))))))
