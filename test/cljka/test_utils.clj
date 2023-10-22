@@ -85,10 +85,11 @@
    (with-producer StringSerializer StringSerializer f)))
 
 (defn produce!
-  [producer topic k v]
-  (let [r (ProducerRecord. topic k v)
-        f (.send producer r)]
-    (deref f 3000 nil)))
+  [producer topic kvs]
+  (doseq [[k v] kvs]
+    (let [r (ProducerRecord. topic k v)
+          f (.send producer r)]
+      (deref f 3000 nil))))
 
 (defn ensure-topic!
   [topic partition-count]

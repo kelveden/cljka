@@ -2,8 +2,9 @@
   (:require [cljka.config :refer [normalize-kafka-config]])
   (:import (java.util HashMap)
            (org.apache.kafka.clients.admin AdminClient OffsetSpec)
-           (org.apache.kafka.clients.consumer OffsetAndMetadata)
-           (org.apache.kafka.common TopicPartition)))
+           (org.apache.kafka.clients.consumer KafkaConsumer OffsetAndMetadata)
+           (org.apache.kafka.common TopicPartition)
+           (org.apache.kafka.common.serialization Deserializer StringDeserializer)))
 
 ; TODO: move to core namespace along with all other configuration merging logic
 (defn ->topic-name
@@ -133,3 +134,29 @@
       (wait-for-kafka-future)
       (sort)
       (vec)))
+
+(defn consume!
+  [kafka-config topic from]
+  (let [deserializer (StringDeserializer.)
+        consumer     (KafkaConsumer. ^HashMap (normalize-kafka-config kafka-config)
+                                     ^Deserializer deserializer
+                                     ^Deserializer deserializer)
+        tps          (if (coll? from)
+                       (->> from
+                            (map #(TopicPartition. topic (first %))))
+                       (->> (.partitionsFor consumer topic)
+                            (map #(TopicPartition. topic (.partition %)))))]
+    (.assign consumer tps)
+
+    (if (coll? from)
+      (doseq [[p o] from]
+        (let [tp (TopicPartition. topic p)]
+          (case o
+            :start (.seekToBeginning consumer [tp])
+            :end (.seekToEnd consumer [tp])
+            (.seek consumer ^TopicPartition tp (long o)))))
+      (case from
+        :start (.seekToBeginning consumer tps)
+        (.seekToEnd consumer tps)))
+
+    consumer))

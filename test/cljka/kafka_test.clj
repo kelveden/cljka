@@ -1,7 +1,7 @@
 (ns cljka.kafka-test
   (:require [cljka.deserialization]
             [cljka.kafka :as kafka]
-            [cljka.test-utils :refer [*kafka-admin-client* ensure-topic! produce! with-consumer with-kafka with-producer]]
+            [cljka.test-utils :refer [*kafka-admin-client* *kafka-config* ensure-topic! produce! with-consumer with-kafka with-producer]]
             [clojure.set :refer [subset?]]
             [clojure.test :refer :all]
             [taoensso.timbre :as log]
@@ -15,6 +15,11 @@
                      (merge {:min-level :warn})))
 
 (use-fixtures :once with-kafka)
+
+(defn- generate-random-messages
+  [n]
+  (repeatedly n #(vector (str (UUID/randomUUID))
+                         (str (UUID/randomUUID)))))
 
 
 ;------------------------------------------------
@@ -69,8 +74,8 @@
 
     ; AND 5 messages on each topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 5 #(produce! producer topic1 (str (UUID/randomUUID)) (str (UUID/randomUUID)))))
-                     (doall (repeatedly 5 #(produce! producer topic2 (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic1 (generate-random-messages 5))
+                     (produce! producer topic2 (generate-random-messages 5))))
 
     ; WHEN a consumer consumes 5 messages from across both topics
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -107,7 +112,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 10 #(produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 10))))
 
     ; WHEN the start offsets of the topic are requested
     (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic :start)]
@@ -125,7 +130,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 10 #(produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 10))))
 
     ; WHEN the end offsets of the topic are requested
     (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic :end)]
@@ -143,9 +148,9 @@
       (fn [producer]
         (let [start (.toEpochMilli (t/instant))]
           ; AND 2 messages on the topic, produced 500ms apart from now.
-          (produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))
+          (produce! producer topic [[(str (UUID/randomUUID)) (str (UUID/randomUUID))]])
           (Thread/sleep 500)
-          (produce! producer topic (str (UUID/randomUUID)) (str (UUID/randomUUID)))
+          (produce! producer topic [[(str (UUID/randomUUID)) (str (UUID/randomUUID))]])
 
           ; WHEN the offset of the topic is requested at a time that should be BEFORE the message has been produced.
           (let [topic-offsets (kafka/get-offsets-at *kafka-admin-client* topic 0)]
@@ -171,8 +176,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -192,8 +196,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN a consumer initialises but doesn't actually consume
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -217,8 +220,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -245,8 +247,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN the group offsets are set to the end of the topic
     (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :end)
@@ -271,8 +272,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN the group offsets are set to the end of the topic
     (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group 10)
@@ -300,8 +300,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN a consumer group offset is reset to the end of the topic
     (kafka/set-group-offset! *kafka-admin-client* topic 3 consumer-group :end)
@@ -321,8 +320,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; AND a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -348,8 +346,7 @@
 
     ; AND some messages on the topic
     (with-producer (fn [producer]
-                     (doall (repeatedly 100 #(produce! producer topic
-                                                       (str (UUID/randomUUID)) (str (UUID/randomUUID)))))))
+                     (produce! producer topic (generate-random-messages 100))))
 
     ; WHEN a consumer group offset is reset to the end of the topic
     (kafka/set-group-offset! *kafka-admin-client* topic 3 consumer-group 10)
@@ -373,3 +370,62 @@
 
     (is (subset? (set topics)
                  (set (kafka/get-topics *kafka-admin-client*))))))
+
+
+;------------------------------------------------
+(comment kafka/consume)
+;------------------------------------------------
+
+
+(deftest can-consume-from-start-of-topic
+  ; GIVEN a topic
+  (let [topic    (str (UUID/randomUUID))
+        messages (generate-random-messages 100)]
+    (ensure-topic! topic 4)
+
+    ; AND the messages are produced to the topic
+    (with-producer (fn [producer]
+                     (produce! producer topic messages)))
+
+    ; WHEN consumption is started at the beginning of the topic.
+    (with-open [consumer (kafka/consume! *kafka-config* topic :start)]
+      (let [consumed (.poll consumer (Duration/ofSeconds 1))]
+        ; THEN all messages are consumed
+        (is (= (set messages)
+               (set (->> consumed
+                         (map #(vector (.key %) (.value %)))
+                         (vec)))))))))
+
+(deftest can-consume-from-end-of-topic
+  ; GIVEN a topic
+  (let [topic    (str (UUID/randomUUID))
+        messages (generate-random-messages 100)]
+    (ensure-topic! topic 4)
+
+    ; AND the messages are produced to the topic
+    (with-producer (fn [producer]
+                     (produce! producer topic messages)))
+
+    ; WHEN consumption is started at the end of the topic.
+    (with-open [consumer (kafka/consume! *kafka-config* topic :end)]
+      (let [consumed (.poll consumer (Duration/ofSeconds 0))]
+        ; THEN no messages are consumed
+        (is (empty? consumed))))))
+
+(deftest can-consume-from-specific-partitions
+  ; GIVEN a topic
+  (let [topic    (str (UUID/randomUUID))
+        messages (generate-random-messages 100)]
+    (ensure-topic! topic 4)
+
+    ; AND the messages are produced to the topic
+    (with-producer (fn [producer]
+                     (produce! producer topic messages)))
+
+    ; WHEN consumption is started at a specific point on the topic.
+    (with-open [consumer1 (kafka/consume! *kafka-config* topic [[0 :start] [1 :start]])
+                consumer2 (kafka/consume! *kafka-config* topic [[2 :start] [3 :start]])]
+      (let [consumed1 (.poll consumer1 (Duration/ofSeconds 1))
+            consumed2 (.poll consumer2 (Duration/ofSeconds 1))]
+        ; THEN all messages from the topic are consumed by individual partition
+        (is (= 100 (+ (.count consumed1) (.count consumed2))))))))
