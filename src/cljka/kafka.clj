@@ -148,15 +148,25 @@
                             (map #(TopicPartition. topic (.partition %)))))]
     (.assign consumer tps)
 
-    (if (coll? from)
+    (cond
+      (coll? from)
       (doseq [[p o] from]
         (let [tp (TopicPartition. topic p)]
           (case o
             :start (.seekToBeginning consumer [tp])
             :end (.seekToEnd consumer [tp])
             (.seek consumer ^TopicPartition tp (long o)))))
-      (case from
-        :start (.seekToBeginning consumer tps)
-        (.seekToEnd consumer tps)))
+
+      (number? from)
+      (let [kafka-admin-client (new-admin-client kafka-config)
+            offsets            (get-offsets-at kafka-admin-client topic from)]
+        (doseq [[p o] offsets]
+          (.seek consumer (TopicPartition. topic p) ^long o)))
+
+      (= :start from)
+      (.seekToBeginning consumer tps)
+
+      (= :end from)
+      (.seekToEnd consumer tps))
 
     consumer))

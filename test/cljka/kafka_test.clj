@@ -429,3 +429,23 @@
             consumed2 (.poll consumer2 (Duration/ofSeconds 1))]
         ; THEN all messages from the topic are consumed by individual partition
         (is (= 100 (+ (.count consumed1) (.count consumed2))))))))
+
+(deftest can-consume-from-a-specific-point-in-time
+  ; GIVEN a topic
+  (let [topic     (str (UUID/randomUUID))
+        messages1 (generate-random-messages 40)
+        messages2 (generate-random-messages 60)]
+    (ensure-topic! topic 4)
+
+    ; AND the messages are produced to the topic
+    (let [start (System/currentTimeMillis)]
+      (with-producer (fn [producer]
+                       (produce! producer topic messages1)
+                       (Thread/sleep 500)
+                       (produce! producer topic messages2)))
+
+      ; WHEN consumption is started at a specific point on the topic.
+      (with-open [consumer (kafka/consume! *kafka-config* topic (+ start 400))]
+        (let [consumed (.poll consumer (Duration/ofSeconds 1))]
+          ; THEN all messages from the topic are consumed by individual partition
+          (is (= 60 (.count consumed))))))))
