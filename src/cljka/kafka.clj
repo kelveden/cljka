@@ -13,7 +13,7 @@
     (get-in topics [topic :name])
     topic))
 
-(defn new-admin-client
+(defn ->admin-client
   [kafka-config]
   (-> kafka-config
       ^HashMap (normalize-kafka-config)
@@ -158,7 +158,7 @@
             (.seek consumer ^TopicPartition tp (long o)))))
 
       (number? from)
-      (let [kafka-admin-client (new-admin-client kafka-config)
+      (let [kafka-admin-client (->admin-client kafka-config)
             offsets            (get-offsets-at kafka-admin-client topic from)]
         (doseq [[p o] offsets]
           (.seek consumer (TopicPartition. topic p) ^long o)))

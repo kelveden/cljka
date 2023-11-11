@@ -40,7 +40,7 @@
 
 (defn ^:no-doc help
   ([]
-   (->> ['kafka 'user]
+   (->> ['core 'channel]
         (map help)
         vec)
    :done)
@@ -54,7 +54,7 @@
      (when-not (:no-doc f)
        (doseq [arglist (:arglists f)]
          (println
-           (str "(" (cyan (str (name ns) "/" (:name f))) " " (yellow arglist) ")")))
+           (str "(" (cyan (:name f)) " " (yellow arglist) ")")))
        (println (green (:doc f)))
        (println)))
 
@@ -70,6 +70,4 @@
   (str
     (yellow "Welcome to the Kafka Tooling REPL. Type ")
     (magenta "(help)")
-    (yellow " or ")
-    (magenta "(help '<ns>)")
     (yellow " for more information.")))

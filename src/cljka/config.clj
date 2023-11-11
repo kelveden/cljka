@@ -1,6 +1,10 @@
 (ns cljka.config
   (:require [clojure.edn :as edn]
-            [clojure.walk :refer [stringify-keys]]))
+            [clojure.spec.alpha :as s]
+            [clojure.walk :refer [stringify-keys]]
+            [clojure.string]))
+
+(def ^:dynamic *principal* nil)
 
 {:environments {:env1 {:kafka      {:bootstrap.servers       ""
                                     :security.protocol       "ssl"
@@ -35,12 +39,25 @@
       (slurp)
       (edn/read-string)))
 
-;
-;(defmacro with
-;  [something & body]
-;  `(do
-;     (def ~(symbol "thing") ~something)
-;     ~@body))
-;
-;(with "whatever"
-;      (prn thing))
+(defn ->kafka-config
+  "Selects and merges kafka config based on either a) a principal (if one has been selected with with-principal); b) a topic
+  (based on the principal assigned to that topic in the configuration); or c) just the core kafka config if (a) and (b) fail."
+  [config environment topic]
+  (let [core-kafka-config      (-> config :environments environment :kafka)
+        principal              (cond
+                                 (some? *principal*) *principal*
+                                 (keyword? topic) (-> config :environments environment :topics topic :principal))
+        principal-kafka-config (some-> config :environments environment :principals principal :kafka)]
+    (->> (merge core-kafka-config principal-kafka-config)
+         (normalize-kafka-config))))
+
+(defmacro with-principal
+  [principal & body]
+  `(binding [*principal* ~principal]
+     ~@body))
+
+(defn ->topic-name
+  [config environment topic]
+  (if (keyword? topic)
+    (some-> config :environments environment :topics topic :name)
+    topic))
