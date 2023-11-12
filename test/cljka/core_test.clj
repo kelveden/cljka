@@ -3,7 +3,8 @@
             [cljka.core :refer [get-partitions]]
             [cljka.kafka :as kafka :refer [->admin-client]]
             [picomock.core :as pico]
-            [cljka.config :refer [load-config]]))
+            [cljka.config :refer [load-config]]
+            [cljka.test-utils]))
 
 (def ^:private dummy-admin-client-factory (fn [_] :admin-client))
 
@@ -29,3 +30,9 @@
     (let [[arg1 arg2] (first (pico/mock-args kafka/get-partitions))]
       (is (= :admin-client arg1))
       (is (= "mytopic" arg2)))))
+
+(deftest get-partitions-arguments-are-spec-checked
+  (is (spec-error-thrown? #{[:topic :string] [:topic :keyword]}
+                          (get-partitions :env1 1)))
+  (is (spec-error-thrown? #{[:environment]}
+                          (get-partitions "someenv" "sometopic"))))

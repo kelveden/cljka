@@ -6,6 +6,7 @@
             [clojure.test :refer :all]
             [taoensso.timbre :as log])
   (:import (cljka.deserialization NoopDeserializer)
+           (clojure.lang ExceptionInfo)
            (java.time Duration)
            (java.util HashMap UUID)
            (org.apache.kafka.clients.admin AdminClient NewTopic)
@@ -17,6 +18,10 @@
 
 (def ^:dynamic *kafka-config* {})
 (def ^:dynamic *kafka-admin-client* nil)
+
+;
+;--- Assertion helpers
+;
 
 (defmacro is-eventually?
   [& body]
@@ -31,6 +36,29 @@
                             (Thread/sleep 100)))]
          (deref fut# 1000 nil))
        (is (not ~@body))))
+
+; Assert that a specific a Clojure spec error with the specified paths and function is thrown
+(defmethod assert-expr 'spec-error-thrown? [msg form]
+  (let [expected-paths (nth form 1)
+        body           (nthnext form 2)]
+    `(try ~@body
+          (do-report {:type :fail, :message ~msg, :expected '~form, :actual nil})
+          (catch ExceptionInfo e#
+            (let [actual-paths# (->> (ex-data e#)
+                                     :clojure.spec.alpha/problems
+                                     (map :path)
+                                     (set))]
+              (if (= ~expected-paths actual-paths#)
+                (do-report {:type     :pass, :message ~msg,
+                            :expected '~form, :actual e#})
+                (do-report {:type     :fail, :message ~msg,
+                            :expected '~form, :actual {:paths actual-paths#
+                                                       :e     e#}})))
+            e#))))
+
+;
+;--- Kafka helpers
+;
 
 (defn with-kafka
   [f]

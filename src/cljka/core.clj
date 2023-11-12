@@ -2,6 +2,7 @@
   (:require [cljka.kafka :as kafka]
             [cljka.config :refer [load-config ->kafka-config ->topic-name]]
             [clojure.spec.alpha :as s]
+            [clojure.spec.test.alpha :as stest]
             [clojure.string]))
 
 (s/def ::non-blank-string (s/and string? (complement clojure.string/blank?)))
@@ -24,3 +25,5 @@
         :args (s/cat :environment ::environment
                      :topic ::topic)
         :ret (s/coll-of nat-int?))
+
+(stest/instrument)
