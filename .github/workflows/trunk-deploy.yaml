@@ -1,0 +1,18 @@
+name: Trunk deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/prepare-clojure
+      - run: make test
+        shell: bash
+
+

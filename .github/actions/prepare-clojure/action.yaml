@@ -1,0 +1,20 @@
+name: Prepare Clojure/Leiningen environment
+description: Prepare an environment for building Clojure using Leiningen.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v3
+      name: Setup java
+      with:
+        distribution: temurin
+        java-version: 21
+    - name: Install Leiningen
+      uses: DeLaGuardo/setup-clojure@12.1
+      with:
+        cli: latest
+    - name: Cache clojure dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: cljdeps-${{ hashFiles('deps.edn') }}
+

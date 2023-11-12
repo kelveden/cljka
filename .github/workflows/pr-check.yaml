@@ -1,0 +1,13 @@
+name: PR check
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/prepare-clojure
+      - run: make test
+        shell: bash

@@ -1,5 +1,6 @@
 (ns cljka.config
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.walk :refer [stringify-keys]]
             [clojure.string]))
@@ -35,9 +36,11 @@
 (defn load-config
   "Reloads the cljka configuration file."
   []
-  (-> (str (System/getProperty "user.home") "/.config/cljka/config.edn")
-      (slurp)
-      (edn/read-string)))
+  (let [config-file-path (str (System/getProperty "user.home") "/.config/cljka/config.edn")]
+    (if (.exists (io/file config-file-path))
+      (-> (slurp config-file-path)
+          (edn/read-string))
+      {})))
 
 (defn ->kafka-config
   "Selects and merges kafka config based on either a) a principal (if one has been selected with with-principal); b) a topic

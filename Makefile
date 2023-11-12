@@ -2,11 +2,11 @@
 
 repl:
     # Double-pipe to avoid error when exiting REPL
-	@clj||:
+	@clojure||:
 
 test:
-	@clj -M:test
+	@clojure -M:test
 
 lint:
-	@clj -M:organise-namespaces
-	@clj -M:lint
+	@clojure -M:organise-namespaces
+	@clojure -M:lint
