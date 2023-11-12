@@ -1,7 +1,6 @@
 (ns cljka.config
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
             [clojure.walk :refer [stringify-keys]]
             [clojure.string]))
 

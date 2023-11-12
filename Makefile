@@ -10,3 +10,6 @@ test:
 lint:
 	@clojure -M:organise-namespaces
 	@clojure -M:lint
+
+scan:
+	@clojure -M:clj-watson

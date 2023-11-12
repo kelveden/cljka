@@ -1,7 +1,7 @@
 {:aliases
  {:outdated
-  {:deps      {com.github.liquidz/antq {:mvn/version "RELEASE"}}
-   :main-opts ["-m" "antq.core"]}
+  {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+   :main-opts  ["-m" "antq.core"]}
 
   :lint
   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}
@@ -16,12 +16,16 @@
 
   :organise-namespaces
   {:extra-deps {nsorg-cli/nsorg-cli {:mvn/version "0.3.1"}}
-   :main-opts  ["-m" "nsorg.cli" "-e" "src" "test"]}}
+   :main-opts  ["-m" "nsorg.cli" "-e" "src" "test"]}
+
+  :clj-watson
+  {:extra-deps {io.github.clj-holmes/clj-watson {:git/tag "v4.1.2" :git/sha "eb15492"}}
+   :main-opts  ["-m" "clj-watson.cli" "scan" "-s" "-f" "-p" "deps.edn"]}}
 
  :paths ["src"]
 
  :deps  {org.apache.kafka/kafka-clients {:mvn/version "3.6.0"}
-         cheshire/cheshire              {:mvn/version "5.11.0"}
+         cheshire/cheshire              {:mvn/version "5.12.0"}
          com.fzakaria/slf4j-timbre      {:mvn/version "0.4.0"}
          com.taoensso/timbre            {:mvn/version "6.3.1"}
          org.clojure/clojure            {:mvn/version "1.11.1"}

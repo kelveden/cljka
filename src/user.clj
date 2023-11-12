@@ -1,6 +1,9 @@
 (ns user
   (:require [cljka.config :refer [load-config]]
-            [clojure.repl :refer [dir-fn]]))
+            [clojure.repl :refer [dir-fn]]
+            [taoensso.timbre :refer [set-min-level!]]))
+
+(set-min-level! :warn)
 
 ;
 ;--- Colourisation
