@@ -91,8 +91,8 @@
                                   group-offsets latest-offsets)
                              (vec))
             total        (->> by-partition (map second) (reduce +))]
-        {:total      total
-         :partitions by-partition})
+        {:total        total
+         :by-partition by-partition})
       :no-lag-data)))
 
 (defn set-group-offsets!
@@ -109,7 +109,9 @@
                                   [(TopicPartition. topic p)
                                    (OffsetAndMetadata. o)]))
                            (into {}))]
-    (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))
+    (-> (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)
+        (.all)
+        (wait-for-kafka-future))))
 
 (defn set-group-offset!
   "Sets the group offset on a single partition to the specified value.
@@ -124,10 +126,12 @@
                           (.offset)))
                    offset)
         tps->oam {(TopicPartition. topic partition) (OffsetAndMetadata. o)}]
-    (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)))
+    (-> (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)
+        (.all)
+        (wait-for-kafka-future))))
 
 (defn get-topics
-  "Gets a list o all topics."
+  "Gets a list of all topics."
   [^AdminClient kafka-admin-client]
   (-> (.listTopics kafka-admin-client)
       (.names)
@@ -136,6 +140,10 @@
       (vec)))
 
 (defn consume!
+  "Starts a new consumer on the specified topic from the specified point. The 'from'
+  parameter can be any of :start, :end, a numeric offset. All partitions are consumed from
+  the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
+  in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
   [kafka-config topic from]
   (let [deserializer (StringDeserializer.)
         consumer     (KafkaConsumer. ^HashMap (normalize-kafka-config kafka-config)
@@ -150,12 +158,12 @@
 
     (cond
       (coll? from)
-      (doseq [[p o] from]
+      (doseq [[p p-from] from]
         (let [tp (TopicPartition. topic p)]
-          (case o
+          (case p-from
             :start (.seekToBeginning consumer [tp])
             :end (.seekToEnd consumer [tp])
-            (.seek consumer ^TopicPartition tp (long o)))))
+            (.seek consumer ^TopicPartition tp (long p-from)))))
 
       (number? from)
       (let [kafka-admin-client (->admin-client kafka-config)

@@ -1,25 +1,57 @@
 (ns cljka.config
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
             [clojure.walk :refer [stringify-keys]]
-            [clojure.string]))
+            [clojure.string]
+            [taoensso.timbre :as log]))
 
 (def ^:dynamic *principal* nil)
 
-{:environments {:env1 {:kafka      {:bootstrap.servers       ""
-                                    :security.protocol       "ssl"
-                                    :ssl.key.password        ""
-                                    :ssl.keystore.password   ""
-                                    :ssl.keystore.type       "pkcs12"
-                                    :ssl.truststore.password "password"}
-                       :principals {:user1 {:kafka           {:ssl.keystore.location   ""
-                                                              :ssl.truststore.location ""}
-                                            :schema-registry {:username ""
-                                                              :password ""}}}
-                       :topics     {:topic1 {:name      "some_topic1"
-                                             :principal :user1}
-                                    :topic2 {:name      "some_topic2"
-                                             :principal :user1}}}}}
+(s/def ::non-blank-string (s/and string? (complement clojure.string/blank?)))
+
+;
+; environment
+;
+
+; kafka
+(s/def ::bootstrap.servers ::non-blank-string)
+(s/def ::kafka (s/and (s/keys :req-un [::bootstrap.servers])
+                      (s/map-of keyword? string?)))
+; principals
+(s/def ::principals (s/map-of keyword?
+                              (s/map-of keyword?
+                                        (s/map-of keyword? string?))))
+; topics
+(s/def ::principal keyword?)
+(s/def ::name ::non-blank-string)
+(s/def ::topics (s/map-of keyword? (s/keys :req-un [::name]
+                                           :opt-un [::principal])))
+
+(s/def ::environment (s/keys :req-un [::kafka]
+                             :opt-un [::principals ::topics]))
+
+;
+; config
+;
+
+(s/def ::environments (s/map-of keyword? ::environment))
+(s/def ::config (s/keys :req-un [::environments]))
+
+(def x {:environments {:env1 {:kafka      {:bootstrap.servers       "dfsdfd"
+                                           :security.protocol       "ssl"
+                                           :ssl.key.password        ""
+                                           :ssl.keystore.password   ""
+                                           :ssl.keystore.type       "pkcs12"
+                                           :ssl.truststore.password "password"}
+                              :principals {:user1 {:kafka           {:ssl.keystore.location   ""
+                                                                     :ssl.truststore.location ""}
+                                                   :schema-registry {:username ""
+                                                                     :password ""}}}
+                              :topics     {:topic1 {:name      "some_topic1"
+                                                    :principal :user1}
+                                           :topic2 {:name      "some_topic2"
+                                                    :principal :user1}}}}})
 
 {:environments {:env1 {:kafka  {:bootstrap.servers "localhost:21556"}
                        :topics {:topic1 {:name "topic1"}
@@ -36,6 +68,7 @@
   "Reloads the cljka configuration file."
   []
   (let [config-file-path (str (System/getProperty "user.home") "/.config/cljka/config.edn")]
+    (log/info "Loading configuration from file..." {:file config-file-path})
     (if (.exists (io/file config-file-path))
       (-> (slurp config-file-path)
           (edn/read-string))
@@ -57,9 +90,3 @@
   [principal & body]
   `(binding [*principal* ~principal]
      ~@body))
-
-(defn ->topic-name
-  [config environment topic]
-  (if (keyword? topic)
-    (some-> config :environments environment :topics topic :name)
-    topic))

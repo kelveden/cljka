@@ -185,7 +185,7 @@
                      (.poll consumer (Duration/ofSeconds 1))))
 
     ; THEN the lag is 0
-    (is (= {:total 0 :partitions [[0 0] [1 0] [2 0] [3 0]]}
+    (is (= {:total 0 :by-partition [[0 0] [1 0] [2 0] [3 0]]}
            (kafka/get-lag *kafka-admin-client* topic consumer-group)))))
 
 (deftest no-lag-data-is-returned-if-consumer-group-not-consumed-from-topic
