@@ -84,6 +84,25 @@
                      :at ::at)
         :ret ::partition-offsets)
 
+(defn get-offset-at
+  "Gets the offset for the specified partition of a topic at a particular point in time.
+
+  at can be :start, :end or a number representing an epoch milli point in time."
+  [environment topic partition at]
+  (let [{:keys [client config]}
+        (create-client environment topic)
+
+        topic-name
+        (->topic-name config environment topic)]
+    (kafka/get-offset-at client topic-name partition at)))
+
+(s/fdef get-offset-at
+        :args (s/cat :environment ::environment
+                     :topic ::topic
+                     :partition nat-int?
+                     :at ::at)
+        :ret nat-int?)
+
 (defn get-topics
   "Lists all topics in alphabetical order."
   [environment]
