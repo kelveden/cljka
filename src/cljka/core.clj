@@ -1,5 +1,6 @@
 (ns cljka.core
   (:require [cljka.kafka :as kafka]
+            [cljka.confirm :refer [with-confirmation]]
             [cljka.config :refer [load-config ->kafka-config]]
             [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
@@ -140,7 +141,9 @@
 
         topic-name
         (->topic-name config environment topic)]
-    (kafka/set-group-offsets! client topic-name consumer-group partition-offsets)))
+    (with-confirmation
+      (format "Setting offsets for consumer group '%s' on topic '%s' to %s." consumer-group topic partition-offsets)
+      (kafka/set-group-offsets! client topic-name consumer-group partition-offsets))))
 
 (s/fdef set-group-offsets!
         :args (s/cat :environment ::environment
@@ -159,7 +162,9 @@
 
         topic-name
         (->topic-name config environment topic)]
-    (kafka/set-group-offset! client topic-name partition consumer-group offset)))
+    (with-confirmation
+      (format "Setting offsets for consumer group '%s' on partition '%s' topic '%s' to %s." consumer-group partition topic offset)
+      (kafka/set-group-offset! client topic-name partition consumer-group offset))))
 
 (s/fdef set-group-offset!
         :args (s/cat :environment ::environment
