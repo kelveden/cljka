@@ -164,6 +164,68 @@
 
 
 ;------------------------------------------------
+(comment kafka/get-offset-at)
+;------------------------------------------------
+
+
+(deftest can-get-topic-starting-offset
+  ; GIVEN a topic
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 2]
+    (ensure-topic! topic partition-count)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (produce! producer topic (generate-random-messages 10))))
+
+    ; WHEN the start offsets of the topic are requested
+    (let [topic-offset1 (kafka/get-offset-at *kafka-admin-client* topic 0 :start)
+          topic-offset2 (kafka/get-offset-at *kafka-admin-client* topic 1 :start)]
+      ; THEN the offset for all partitions are 0
+      (is (= 0 topic-offset1 topic-offset2)))))
+
+(deftest can-get-topic-end-offset
+  ; GIVEN a topic
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 2]
+    (ensure-topic! topic partition-count)
+
+    ; AND some messages on the topic
+    (with-producer (fn [producer]
+                     (produce! producer topic (generate-random-messages 10))))
+
+    ; WHEN the end offsets of the topic are requested
+    (let [topic-offset1 (kafka/get-offset-at *kafka-admin-client* topic 0 :end)
+          topic-offset2 (kafka/get-offset-at *kafka-admin-client* topic 1 :end)]
+      ; THEN the offsets add up to the total number of messages
+      (is (= 10 (+ topic-offset1 topic-offset2))))))
+
+(deftest can-get-topic-offset-at-specific-time
+  ; GIVEN a topic with a single partition
+  (let [topic           (str (UUID/randomUUID))
+        partition-count 1]
+    (ensure-topic! topic partition-count)
+
+    (with-producer
+      (fn [producer]
+        (let [start (.toEpochMilli (t/instant))]
+          ; AND 2 messages on the topic, produced 500ms apart from now.
+          (produce! producer topic [[(str (UUID/randomUUID)) (str (UUID/randomUUID))]])
+          (Thread/sleep 500)
+          (produce! producer topic [[(str (UUID/randomUUID)) (str (UUID/randomUUID))]])
+
+          ; WHEN the offset of the topic is requested at a time that should be BEFORE the message has been produced.
+          (let [topic-offset (kafka/get-offset-at *kafka-admin-client* topic 0 0)]
+            ; THEN the offset will be 0
+            (is (= 0 topic-offset)))
+
+          ; AND WHEN the offset of the topic is requested at a time that should be AFTER the 1st message has been produced (but before the second).
+          (let [topic-offset (kafka/get-offset-at *kafka-admin-client* topic 0 (+ start 300))]
+            ; THEN the offset will be 1 - i.e. the earliest offset with a timestamp greater than "at"
+            (is (= 1 topic-offset))))))))
+
+
+;------------------------------------------------
 (comment kafka/get-lag)
 ;------------------------------------------------
 
@@ -212,58 +274,6 @@
 ;------------------------------------------------
 
 
-(deftest can-set-consumer-group-offsets-to-start-of-topic
-  ; GIVEN a topic
-  (let [topic          (str (UUID/randomUUID))
-        consumer-group (str (UUID/randomUUID))]
-    (ensure-topic! topic 4)
-
-    ; AND some messages on the topic
-    (with-producer (fn [producer]
-                     (produce! producer topic (generate-random-messages 100))))
-
-    ; WHEN a consumer starts consuming
-    (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])
-                     (.poll consumer (Duration/ofSeconds 1))))
-
-    ; THEN the group offsets are at the end of topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
-      (is (= 100 (->> offsets (map second) (reduce +)))))
-
-    ; AND WHEN the consumer group offsets are reset to the start
-    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :start)
-
-    ; THEN the group offsets output reflects the start of the topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
-      (is (= [[0 0] [1 0] [2 0] [3 0]] offsets)))))
-
-(deftest can-set-consumer-group-offsets-to-end-of-topic
-  ; GIVEN a topic
-  (let [topic          (str (UUID/randomUUID))
-        consumer-group (str (UUID/randomUUID))]
-    (ensure-topic! topic 4)
-
-    ; AND some messages on the topic
-    (with-producer (fn [producer]
-                     (produce! producer topic (generate-random-messages 100))))
-
-    ; WHEN the group offsets are set to the end of the topic
-    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group :end)
-
-    ; AND a consumer starts consuming
-    (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])
-
-                     ; THEN no messages are retrieved
-                     (is (empty? (.poll consumer (Duration/ofSeconds 1))))))
-
-    ; AND the group offsets are at the end of topic
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
-      (is (= 100 (->> offsets (map second) (reduce +)))))))
-
 (deftest can-set-consumer-group-offsets-to-specific-offset
   ; GIVEN a topic
   (let [topic          (str (UUID/randomUUID))
@@ -274,8 +284,8 @@
     (with-producer (fn [producer]
                      (produce! producer topic (generate-random-messages 100))))
 
-    ; WHEN the group offsets are set to the end of the topic
-    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group 10)
+    ; WHEN the group offsets are set to the second message on each partition
+    (kafka/set-group-offsets! *kafka-admin-client* topic consumer-group [[0 1] [1 1] [2 1] [3 1]])
 
     ; AND a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
@@ -283,7 +293,7 @@
                      (.subscribe consumer [topic])
 
                      ; THEN only those messages from after the offset are retrieved
-                     (is (= 60 (-> (.poll consumer (Duration/ofSeconds 1))
+                     (is (= 96 (-> (.poll consumer (Duration/ofSeconds 1))
                                    (.count))))))))
 
 
@@ -291,52 +301,6 @@
 (comment kafka/set-group-offset!)
 ;------------------------------------------------
 
-
-(deftest can-set-consumer-group-offset-to-end-of-topic
-  ; GIVEN a topic
-  (let [topic          (str (UUID/randomUUID))
-        consumer-group (str (UUID/randomUUID))]
-    (ensure-topic! topic 4)
-
-    ; AND some messages on the topic
-    (with-producer (fn [producer]
-                     (produce! producer topic (generate-random-messages 100))))
-
-    ; WHEN a consumer group offset is reset to the end of the topic
-    (kafka/set-group-offset! *kafka-admin-client* topic 3 consumer-group :end)
-    (Thread/sleep 200)
-
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
-      ; THEN the group offsets output reflects the end of the topic for partition 3
-      (is (= 1 (count offsets)))
-      (is (= 3 (first (first offsets))))
-      (is (pos-int? (second (first offsets)))))))
-
-(deftest can-set-consumer-group-offset-to-start-of-topic
-  ; GIVEN a topic
-  (let [topic          (str (UUID/randomUUID))
-        consumer-group (str (UUID/randomUUID))]
-    (ensure-topic! topic 4)
-
-    ; AND some messages on the topic
-    (with-producer (fn [producer]
-                     (produce! producer topic (generate-random-messages 100))))
-
-    ; AND a consumer starts consuming
-    (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])
-                     (.poll consumer (Duration/ofSeconds 1))))
-
-    ; WHEN the group offsets are set to the start of the topic
-    (kafka/set-group-offset! *kafka-admin-client* topic 3 consumer-group :start)
-
-    ; THEN the reset partition is at specified offset but others are unchanged
-    (let [offsets (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)]
-      (is (= [3 0] (nth offsets 3)))
-      (is (= 3 (->> offsets
-                    (filter #(pos-int? (second %)))
-                    (count)))))))
 
 (deftest can-set-consumer-group-offset-to-specific-offset
   ; GIVEN a topic

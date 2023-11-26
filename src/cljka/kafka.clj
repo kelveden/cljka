@@ -63,7 +63,7 @@
     (OffsetSpec/forTimestamp at)))
 
 (defn get-offsets-at
-  "Gets the offsets for the given topic partitions at the specified point in time.
+  "Gets the offsets for the given topic at the specified point in time.
 
   'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
   [^AdminClient kafka-admin-client topic at]
@@ -79,6 +79,20 @@
                     [(.partition tp) (.offset lori)]))
              (sort-kvs)
              (vec))))
+
+(defn get-offset-at
+  "Gets the offset for the specified topic partition at the specified point in time.
+
+  'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
+  [^AdminClient kafka-admin-client topic partition at]
+  (let [offset-spec (at->offset-spec at)
+        tp->os      {(TopicPartition. topic partition) offset-spec}
+        fut         (-> (.listOffsets kafka-admin-client tp->os)
+                        (.all))]
+    (some->> (wait-for-kafka-future fut)
+             (map (fn [[_ lori]]
+                    (.offset lori)))
+             (first))))
 
 (defn get-lag
   "Gets the lag for the specified consumer group on the specified topic."
@@ -96,36 +110,21 @@
       :no-lag-data)))
 
 (defn set-group-offsets!
-  "Sets the group offset on all partitions to the specified value.
-
-  offset can either be :start, :end or a number representing a specific offset"
-  [^AdminClient kafka-admin-client topic group-id offset]
-  (let [topic-offsets (if (keyword? offset)
-                        (get-offsets-at kafka-admin-client topic offset)
-                        (->> (get-partitions kafka-admin-client topic)
-                             (map #(vector % offset))))
-        tps->oam      (->> topic-offsets
-                           (map (fn [[p o]]
-                                  [(TopicPartition. topic p)
-                                   (OffsetAndMetadata. o)]))
-                           (into {}))]
-    (-> (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)
+  "Sets the offset individually for each partition on the given topic to the offset indicated in the partition-offsets."
+  [^AdminClient kafka-admin-client topic group-id partition-offsets]
+  (let [tp->oams (->> partition-offsets
+                      (map (fn [[p o]]
+                             [(TopicPartition. topic p)
+                              (OffsetAndMetadata. o)]))
+                      (into {}))]
+    (-> (.alterConsumerGroupOffsets kafka-admin-client group-id tp->oams)
         (.all)
         (wait-for-kafka-future))))
 
 (defn set-group-offset!
-  "Sets the group offset on a single partition to the specified value.
-
-  offset can either be :start, :end or a number representing a specific offset"
+  "Sets the group offset on a single partition to the specified value."
   [^AdminClient kafka-admin-client topic partition group-id offset]
-  (let [o        (if (keyword? offset)
-                   (let [tp->os {(TopicPartition. topic partition) (at->offset-spec offset)}
-                         fut    (-> (.listOffsets kafka-admin-client tp->os)
-                                    (.partitionResult (TopicPartition. topic partition)))]
-                     (->> (wait-for-kafka-future fut)
-                          (.offset)))
-                   offset)
-        tps->oam {(TopicPartition. topic partition) (OffsetAndMetadata. o)}]
+  (let [tps->oam {(TopicPartition. topic partition) (OffsetAndMetadata. offset)}]
     (-> (.alterConsumerGroupOffsets kafka-admin-client group-id tps->oam)
         (.all)
         (wait-for-kafka-future))))

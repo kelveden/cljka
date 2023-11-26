@@ -67,7 +67,9 @@
         :ret ::partition-offsets)
 
 (defn get-offsets-at
-  "Gets the offsets for the partitions of a topic at a particular point in time."
+  "Gets the offsets for the partitions of a topic at a particular point in time.
+
+  at can be :start, :end or a number representing an epoch milli point in time."
   [environment topic at]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -112,20 +114,20 @@
 (defn set-group-offsets!
   "Sets the group offset on all partitions to the specified value.
 
-  offset can either be :start, :end or a number representing a specific offset"
-  [environment topic consumer-group offset]
+  partition-offsets is a vector of partition->offset pairs where offset is a numeric offset."
+  [environment topic consumer-group partition-offsets]
   (let [{:keys [client config]}
         (create-client environment topic)
 
         topic-name
         (->topic-name config environment topic)]
-    (kafka/set-group-offsets! client topic-name consumer-group offset)))
+    (kafka/set-group-offsets! client topic-name consumer-group partition-offsets)))
 
 (s/fdef set-group-offsets!
         :args (s/cat :environment ::environment
                      :topic ::topic
                      :consumer-group ::consumer-group
-                     :offset ::offset)
+                     :partition-offsets ::partition-offsets)
         :ret nil?)
 
 (defn set-group-offset!
