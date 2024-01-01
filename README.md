@@ -1,6 +1,6 @@
 # cljka
 
-![cljka](https://github.com/kelveden/cljka/actions/workflows/trunk-deploy.yaml/badge.svg)
+![cljka](https://github.com/kelveden/cljka/actions/workflows/trunk-build.yaml/badge.svg)
 
 A Clojure REPL-based tool for working with kafka.
 
