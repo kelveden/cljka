@@ -1,6 +1,5 @@
 (ns cljka.kafka-test
-  (:require [cljka.deserialization]
-            [cljka.kafka :as kafka]
+  (:require [cljka.kafka :as kafka]
             [cljka.test-utils :refer [*kafka-admin-client* *kafka-config* ensure-topic! produce! with-consumer with-kafka with-producer]]
             [clojure.set :refer [subset?]]
             [clojure.test :refer :all]

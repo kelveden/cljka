@@ -144,15 +144,12 @@
   the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
   in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
   [kafka-config topic from]
-  (let [deserializer (StringDeserializer.)
-        consumer     (KafkaConsumer. ^HashMap (normalize-kafka-config kafka-config)
-                                     ^Deserializer deserializer
-                                     ^Deserializer deserializer)
-        tps          (if (coll? from)
-                       (->> from
-                            (map #(TopicPartition. topic (first %))))
-                       (->> (.partitionsFor consumer topic)
-                            (map #(TopicPartition. topic (.partition %)))))]
+  (let [consumer (KafkaConsumer. ^HashMap (normalize-kafka-config kafka-config))
+        tps      (if (coll? from)
+                   (->> from
+                        (map #(TopicPartition. topic (first %))))
+                   (->> (.partitionsFor consumer topic)
+                        (map #(TopicPartition. topic (.partition %)))))]
     (.assign consumer tps)
 
     (cond

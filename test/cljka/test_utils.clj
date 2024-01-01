@@ -1,6 +1,5 @@
 (ns cljka.test-utils
   (:require [cljka.config :refer [normalize-kafka-config]]
-            [cljka.deserialization]
             [cljka.kafka :as kafka]
             [clojure.string]
             [clojure.test :refer :all]
@@ -12,7 +11,7 @@
            (org.apache.kafka.clients.admin AdminClient NewTopic)
            (org.apache.kafka.clients.consumer KafkaConsumer)
            (org.apache.kafka.clients.producer KafkaProducer ProducerRecord)
-           (org.apache.kafka.common.serialization StringSerializer)
+           (org.apache.kafka.common.serialization StringDeserializer StringSerializer)
            (org.testcontainers.containers KafkaContainer)
            (org.testcontainers.utility DockerImageName)))
 
@@ -66,7 +65,9 @@
                             (.start))
         bootstrap-servers (-> (.getBootstrapServers kafka)
                               (clojure.string/replace "PLAINTEXT://" ""))
-        kafka-config      {:bootstrap.servers bootstrap-servers}]
+        kafka-config      {:bootstrap.servers  bootstrap-servers
+                           :key.deserializer   StringDeserializer
+                           :value.deserializer StringDeserializer}]
     (with-open [kafka-admin-client (kafka/->admin-client kafka-config)]
       (try
         (binding [*kafka-config*       kafka-config
