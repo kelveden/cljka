@@ -1,4 +1,4 @@
-name: Trunk deploy
+name: Trunk build
 
 on:
   push:
