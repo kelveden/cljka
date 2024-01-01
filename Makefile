@@ -24,4 +24,5 @@ ancient:
 
 # AOT compile classes
 build:
+	mkdir -p classes
 	@clojure -M:build
