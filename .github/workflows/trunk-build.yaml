@@ -16,3 +16,27 @@ jobs:
         shell: bash
       - run: make test
         shell: bash
+  generate-docs:
+    runs-on: ubuntu-latest
+    needs: [ test ]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/prepare-clojure
+      - run: make build
+        shell: bash
+      - run: |
+          make codox
+          
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add --all
+          
+          if [ -z "$(git status --porcelain)" ]; then
+            ech "No changes to documentation detected."
+          else
+            git commit -m "Rebuilt documentation."
+            git push origin main
+          fi
+        shell: bash

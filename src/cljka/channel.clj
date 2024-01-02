@@ -44,7 +44,7 @@
 
   The first argument is the sink target. Target types supported out of the box are:
 
-  * `clojure.lang.Atom` - the derefed value should be a collection
+  * `clojure.lang.Atom` - the dereferenced value should be a collection
   * `java.io.Writer`
   * `java.io.File`
   * `java.lang.String` - should indicate an absolute file path.
