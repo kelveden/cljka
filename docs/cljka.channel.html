@@ -4,7 +4,7 @@
 </div></div></div><div class="public anchor" id="var-sink"><h3>sink</h3><h4 class="type">multimethod</h4><div class="usage"></div><div class="doc"><div class="markdown"><p>Create a new channel for messages to sink to.</p>
 <p>The first argument is the sink target. Target types supported out of the box are:</p>
 <ul>
-<li><code>clojure.lang.Atom</code> - the derefed value should be a collection</li>
+<li><code>clojure.lang.Atom</code> - the dereferenced value should be a collection</li>
 <li><code>java.io.Writer</code></li>
 <li><code>java.io.File</code></li>
 <li><code>java.lang.String</code> - should indicate an absolute file path.</li>
@@ -20,7 +20,7 @@
 <tr><td align="left"> <code>:n</code>    </td><td align="left"> <code>nil</code>   </td><td align="left"> A limit to the number of messages that will be written to the sink before it closes. </td></tr>
 </tbody>
 </table>
-<p>java.io.Writer based targets (i.e. <code>java.io.Writer</code>, <code>File</code>, <code>String</code>) also support the same additional options as for <a href="null">clojure.java.io/writer</a> plus:</p>
+<p>java.io.Writer based targets (i.e. <code>java.io.Writer</code>, <code>File</code>, <code>String</code>) also support the same additional options as for <code>io/writer</code> plus:</p>
 <table>
 <thead>
 <tr><th align="left"> key                  </th><th align="left"> default  </th><th align="left"> description </th></tr>
