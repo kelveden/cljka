@@ -177,8 +177,8 @@
     ; AND an input channel
     (let [input-ch (async/chan 10)
           data     [0 1 2 3]
-          sink     (channel/sink sw {:printer (fn [s w]
-                                                (.write w (format "{%s}" s)))})]
+          sink     (channel/sink sw {:serializer (fn [s w]
+                                                   (.write w (format "{%s}" s)))})]
       ; AND a file sink
       (channel/to! input-ch [sink])
 

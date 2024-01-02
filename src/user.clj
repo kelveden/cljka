@@ -1,7 +1,9 @@
 (ns user
   (:require [cljka.config :refer [load-config]]
             [clojure.repl :refer [dir-fn]]
-            [taoensso.timbre :refer [set-min-level!]]))
+            [taoensso.timbre :refer [set-min-level!]]
+            [cljka.core :refer :all]
+            [cljka.channel :refer :all]))
 
 (set-min-level! :warn)
 
@@ -23,10 +25,12 @@
 
 (def ^:no-doc config (atom nil))
 
-(defn reload-config!
+(defn reload!
   "Reloads the configuration from file."
   []
   (reset! config (load-config)))
+
+(reload!)
 
 ;
 ;--- Help
@@ -43,7 +47,7 @@
 
 (defn ^:no-doc help
   ([]
-   (->> ['core 'channel]
+   (->> ['cljka.core 'cljka.channel]
         (map help)
         vec)
    :done)
@@ -62,8 +66,6 @@
        (println)))
 
    (println)))
-
-(reload-config!)
 
 ;
 ;--- Prompt

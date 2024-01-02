@@ -26,3 +26,8 @@ ancient:
 build:
 	mkdir -p classes
 	@clojure -M:build
+
+# Build documentation
+codox:
+	rm docs -rf
+	@clojure -X:codox

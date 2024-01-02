@@ -23,7 +23,16 @@
    :main-opts  ["-m" "clj-watson.cli" "scan" "-s" "-f" "-p" "deps.edn"]}
 
   :build
-  {:main-opts ["-e" "(do (compile 'cljka.deserialization) (compile 'cljka.serialization))"]}}
+  {:main-opts ["-e" "(do (compile 'cljka.deserialization) (compile 'cljka.serialization))"]}
+
+  :codox
+  {:extra-deps {codox/codox {:mvn/version "0.10.8"}}
+   :exec-fn    codox.main/generate-docs
+   :exec-args  {:source-paths ["src"]
+                :output-path  "docs"
+                :namespaces   [cljka.core cljka.channel]
+                :metadata     {:doc/format :markdown}
+                :project      {:name "cljka", :version nil, :package nil}}}}
 
  :paths     ["src" "classes"]
 

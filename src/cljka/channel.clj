@@ -15,8 +15,8 @@
   [ch]
   (async-protocols/closed? ch))
 
-(defn recur-to-sink!
-  "Reads items from the incoming channel "
+(defn ^:no-doc recur-to-sink!
+  "Read messages from the incoming channel, writing each message to a sink via the unary sink-fn."
   [ch sink-fn {:keys [pred n] :or {pred any?
                                    n    nil}}]
   (try
@@ -38,14 +38,33 @@
     (catch Exception e
       (log/error e))))
 
-(defmulti sink
-          "Creates a new sink channel to the specified target.
+(defmulti
+  sink
+  "Create a new channel for messages to sink to.
 
-          | key     | default | description |
-          |:--------|:--------|:------------|
-          | `:pred` | `any?`  | A predicate to use to filter the incoming messages by. |
-          | `:n`    | `nil`   | A limit to the number of messages that will be written to the sink before it closes. |"
-          (fn [o & _] (type o)))
+  The first argument is the sink target. Target types supported out of the box are:
+
+  * `clojure.lang.Atom` - the derefed value should be a collection
+  * `java.io.Writer`
+  * `java.io.File`
+  * `java.lang.String` - should indicate an absolute file path.
+
+  The second argument is an option map for that sink target.
+
+  Options supported by all sink targets:
+
+  | key     | default | description |
+  |:--------|:--------|:------------|
+  | `:pred` | `any?`  | A predicate to use to filter the incoming messages by. |
+  | `:n`    | `nil`   | A limit to the number of messages that will be written to the sink before it closes. |
+
+  java.io.Writer based targets (i.e. `java.io.Writer`, `File`, `String`) also support the same additional options as for
+  `io/writer` plus:
+
+  | key                  | default  | description |
+  |:---------------------|:---------|:------------|
+  | `:serializer`        | `pprint` | function taking an object and `java.io.Writer` that will be used to serialize the object to the Writer. |"
+  (fn [o & _] (type o)))
 
 (defmethod sink Atom
   [^Atom a & [opts]]
@@ -55,16 +74,15 @@
     ch))
 
 (defmethod sink Writer
-  [^Writer w & [{:keys [printer close-after-sink?]
-                 :or   {printer           pprint
-                        close-after-sink? false}
+  [^Writer w & [{:keys [serializer]
+                 :or   {serializer pprint}
                  :as   opts}]]
   (let [ch (async/chan)]
     (future
       (try
-        (recur-to-sink! ch #(printer % w) opts)
+        (recur-to-sink! ch #(serializer % w) opts)
         (finally
-          (when close-after-sink? (.close w)))))
+          (.close w))))
     ch))
 
 (defmethod sink File
@@ -72,7 +90,7 @@
   (let [w (apply io/writer (->> (into [] opts)
                                 (flatten)
                                 (cons f)))]
-    (sink w (assoc opts :close-after-sink? true))))
+    (sink w opts)))
 
 (defmethod sink String
   [^String filename & [opts]]
