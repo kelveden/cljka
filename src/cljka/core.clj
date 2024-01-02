@@ -70,7 +70,7 @@
 (defn get-offsets-at
   "Gets the offsets for the partitions of a topic at a particular point in time.
 
-  at can be :start, :end or a number representing an epoch milli point in time."
+  `at` can be `:start`, `:end` or a number representing an epoch milli point in time."
   [environment topic at]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -88,7 +88,7 @@
 (defn get-offset-at
   "Gets the offset for the specified partition of a topic at a particular point in time.
 
-  at can be :start, :end or a number representing an epoch milli point in time."
+  `at` can be `:start`, `:end` or a number representing an epoch milli point in time."
   [environment topic partition at]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -134,7 +134,7 @@
 (defn set-group-offsets!
   "Sets the group offset on all partitions to the specified value.
 
-  partition-offsets is a vector of partition->offset pairs where offset is a numeric offset."
+  `partition-offsets` is a vector of partition->offset pairs where each offset is a numeric offset."
   [environment topic consumer-group partition-offsets]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -155,7 +155,7 @@
 (defn set-group-offset!
   "Sets the group offset on a single partition to the specified value.
 
-  offset can either be :start, :end or a number representing a specific offset"
+  `offset` can either be `:start`, `:end` or a number representing a specific offset"
   [environment topic partition consumer-group offset]
   (let [{:keys [client config]}
         (create-client environment topic)
