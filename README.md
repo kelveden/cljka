@@ -4,6 +4,10 @@
 
 A Clojure REPL-based tool for working with kafka.
 
+## Usage
+
+To start a new REPL: `make` or `make repl`.
+
 ## Serialization/deserialization
 
 Several serializers/deserializers are supported out of the box:

@@ -4,7 +4,8 @@
             [clojure.spec.alpha :as s]
             [clojure.walk :refer [stringify-keys]]
             [clojure.string]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [clojure.spec.alpha :as s]))
 
 (def ^:dynamic *principal* nil)
 
@@ -15,18 +16,28 @@
 ;
 
 ; kafka
-(s/def ::bootstrap.servers ::non-blank-string)
-(s/def ::kafka (s/and (s/keys :req-un [::bootstrap.servers])
+(s/def :kafka/bootstrap.servers ::non-blank-string)
+(s/def ::kafka (s/and (s/keys :req-un [:kafka/bootstrap.servers])
                       (s/map-of keyword? string?)))
+
+; schema registry
+(s/def :schema-registry/base-url ::non-blank-string)
+(s/def :schema-registry/username ::non-blank-string)
+(s/def :schema-registry/password ::non-blank-string)
+(s/def ::schema-registry (s/keys :req-un [:schema-registry/base-url]
+                                 :opt-un [:schema-registry/username :schema-registry/password]))
+
 ; principals
-(s/def ::principals (s/map-of keyword?
-                              (s/map-of keyword?
-                                        (s/map-of keyword? string?))))
+(s/def :principal/kafka (s/map-of keyword? string?))
+(s/def :principal/schema-registry (s/keys :req-un [:schema-registry/username :schema-registry/password]))
+(s/def ::principal (s/keys :opt-un [:principal/kafka :principal/schema-registry]))
+(s/def ::principals (s/map-of keyword? ::principal))
+
 ; topics
-(s/def ::principal keyword?)
-(s/def ::name ::non-blank-string)
-(s/def ::topics (s/map-of keyword? (s/keys :req-un [::name]
-                                           :opt-un [::principal])))
+(s/def :topic/principal keyword?)
+(s/def :topic/name ::non-blank-string)
+(s/def ::topics (s/map-of keyword? (s/keys :req-un [:topic/name]
+                                           :opt-un [:topic/principal])))
 
 (s/def ::environment (s/keys :req-un [::kafka]
                              :opt-un [::principals ::topics]))
@@ -70,8 +81,9 @@
   (let [config-file-path (str (System/getProperty "user.home") "/.config/cljka/config.edn")]
     (log/info "Loading configuration from file..." {:file config-file-path})
     (if (.exists (io/file config-file-path))
-      (-> (slurp config-file-path)
-          (edn/read-string))
+      (->> (slurp config-file-path)
+           (edn/read-string)
+           (s/assert ::config))
       {})))
 
 (defn ->kafka-config

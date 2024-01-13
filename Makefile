@@ -3,7 +3,7 @@
 # Open a REPL
 repl:
     # Double-pipe to avoid error when exiting REPL
-	@clojure||:
+	@clojure -M:repl||:
 
 # Run tests
 test:

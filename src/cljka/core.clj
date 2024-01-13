@@ -6,6 +6,8 @@
             [clojure.spec.test.alpha :as stest]
             [clojure.string]))
 
+(s/check-asserts true)
+
 (s/def ::non-blank-string (s/and string? (complement clojure.string/blank?)))
 (s/def ::topic (s/or :keyword keyword?
                      :string ::non-blank-string))
