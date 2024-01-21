@@ -4,8 +4,7 @@
             [clojure.string]
             [clojure.test :refer :all]
             [taoensso.timbre :as log])
-  (:import (cljka.deserialization NoopDeserializer)
-           (clojure.lang ExceptionInfo)
+  (:import (clojure.lang ExceptionInfo)
            (java.time Duration)
            (java.util HashMap UUID)
            (org.apache.kafka.clients.admin AdminClient NewTopic)
@@ -61,7 +60,7 @@
 
 (defn with-kafka
   [f]
-  (let [kafka             (doto (KafkaContainer. (DockerImageName/parse "confluentinc/cp-kafka:7.5.1"))
+  (let [kafka             (doto (KafkaContainer. (DockerImageName/parse "confluentinc/cp-kafka:7.5.3"))
                             (.start))
         bootstrap-servers (-> (.getBootstrapServers kafka)
                               (clojure.string/replace "PLAINTEXT://" ""))
@@ -91,9 +90,9 @@
            (.close consumer (Duration/ofSeconds 0))
            (log/reportf "==> Closed consumer with config %s." config))))))
   ([consumer-group f]
-   (with-consumer NoopDeserializer NoopDeserializer consumer-group f))
+   (with-consumer StringDeserializer StringDeserializer consumer-group f))
   ([f]
-   (with-consumer NoopDeserializer NoopDeserializer (str (UUID/randomUUID)) f)))
+   (with-consumer StringDeserializer StringDeserializer (str (UUID/randomUUID)) f)))
 
 (defn with-producer
   ([key-serializer value-serializer f]
