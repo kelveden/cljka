@@ -2,7 +2,6 @@
   (:require [clojure.test :refer :all]
             [cljka.config :refer [->kafka-config with-principal]]))
 
-
 (deftest principal-kafka-config-is-merged
   (let [config {:environments {:my-env {:kafka      {:core-field1 "core-value1"
                                                      :core-field2 "core-value2"}

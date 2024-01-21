@@ -65,9 +65,7 @@
                             (.start))
         bootstrap-servers (-> (.getBootstrapServers kafka)
                               (clojure.string/replace "PLAINTEXT://" ""))
-        kafka-config      {:bootstrap.servers  bootstrap-servers
-                           :key.deserializer   StringDeserializer
-                           :value.deserializer StringDeserializer}]
+        kafka-config      {:bootstrap.servers bootstrap-servers}]
     (with-open [kafka-admin-client (kafka/->admin-client kafka-config)]
       (try
         (binding [*kafka-config*       kafka-config

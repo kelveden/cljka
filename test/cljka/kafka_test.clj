@@ -339,6 +339,11 @@
 (comment kafka/consume)
 ;------------------------------------------------
 
+(defn- default-consumer-config
+  []
+  (merge *kafka-config*
+         {:key.deserializer   StringDeserializer
+          :value.deserializer StringDeserializer}))
 
 (deftest can-consume-from-start-of-topic
   ; GIVEN a topic
@@ -351,7 +356,8 @@
                      (produce! producer topic messages)))
 
     ; WHEN consumption is started at the beginning of the topic.
-    (with-open [consumer (kafka/consume! *kafka-config* topic :start)]
+    (with-open [consumer (-> (default-consumer-config)
+                             (kafka/consume! topic :start))]
       (let [consumed (.poll consumer (Duration/ofSeconds 1))]
         ; THEN all messages are consumed
         (is (= (set messages)
@@ -370,7 +376,8 @@
                      (produce! producer topic messages)))
 
     ; WHEN consumption is started at the end of the topic.
-    (with-open [consumer (kafka/consume! *kafka-config* topic :end)]
+    (with-open [consumer (-> (default-consumer-config)
+                             (kafka/consume! topic :end))]
       (let [consumed (.poll consumer (Duration/ofSeconds 0))]
         ; THEN no messages are consumed
         (is (empty? consumed))))))
@@ -386,8 +393,10 @@
                      (produce! producer topic messages)))
 
     ; WHEN consumption is started at a specific point on the topic.
-    (with-open [consumer1 (kafka/consume! *kafka-config* topic [[0 :start] [1 :start]])
-                consumer2 (kafka/consume! *kafka-config* topic [[2 :start] [3 :start]])]
+    (with-open [consumer1 (-> (default-consumer-config)
+                              (kafka/consume! topic [[0 :start] [1 :start]]))
+                consumer2 (-> (default-consumer-config)
+                              (kafka/consume! topic [[2 :start] [3 :start]]))]
       (let [consumed1 (.poll consumer1 (Duration/ofSeconds 1))
             consumed2 (.poll consumer2 (Duration/ofSeconds 1))]
         ; THEN all messages from the topic are consumed by individual partition
@@ -408,7 +417,8 @@
                        (produce! producer topic messages2)))
 
       ; WHEN consumption is started at a specific point on the topic.
-      (with-open [consumer (kafka/consume! *kafka-config* topic (+ start 400))]
+      (with-open [consumer (-> (default-consumer-config)
+                               (kafka/consume! topic (+ start 400)))]
         (let [consumed (.poll consumer (Duration/ofSeconds 1))]
           ; THEN all messages from the topic are consumed by individual partition
           (is (= 60 (.count consumed))))))))
