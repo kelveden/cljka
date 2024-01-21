@@ -4,8 +4,7 @@
             [clojure.spec.alpha :as s]
             [clojure.walk :refer [stringify-keys]]
             [clojure.string]
-            [taoensso.timbre :as log]
-            [clojure.spec.alpha :as s]))
+            [taoensso.timbre :as log]))
 
 (def ^:dynamic *principal* nil)
 
@@ -20,24 +19,15 @@
 (s/def ::kafka (s/and (s/keys :req-un [:kafka/bootstrap.servers])
                       (s/map-of keyword? string?)))
 
-; schema registry
-(s/def :schema-registry/base-url ::non-blank-string)
-(s/def :schema-registry/username ::non-blank-string)
-(s/def :schema-registry/password ::non-blank-string)
-(s/def ::schema-registry (s/keys :req-un [:schema-registry/base-url]
-                                 :opt-un [:schema-registry/username :schema-registry/password]))
-
 ; principals
 (s/def :principal/kafka (s/map-of keyword? string?))
-(s/def :principal/schema-registry (s/keys :req-un [:schema-registry/username :schema-registry/password]))
-(s/def ::principal (s/keys :opt-un [:principal/kafka :principal/schema-registry]))
+(s/def ::principal (s/keys :opt-un [:principal/kafka]))
 (s/def ::principals (s/map-of keyword? ::principal))
 
 ; topics
 (s/def :topic/principal keyword?)
 (s/def :topic/name ::non-blank-string)
-(s/def ::topics (s/map-of keyword? (s/keys :req-un [:topic/name]
-                                           :opt-un [:topic/principal])))
+(s/def ::topics (s/map-of keyword? (s/keys :opt-un [:topic/name :topic/principal])))
 
 (s/def ::environment (s/keys :req-un [::kafka]
                              :opt-un [::principals ::topics]))
@@ -47,26 +37,8 @@
 ;
 
 (s/def ::environments (s/map-of keyword? ::environment))
-(s/def ::config (s/keys :req-un [::environments]))
-
-(def x {:environments {:env1 {:kafka      {:bootstrap.servers       "dfsdfd"
-                                           :security.protocol       "ssl"
-                                           :ssl.key.password        ""
-                                           :ssl.keystore.password   ""
-                                           :ssl.keystore.type       "pkcs12"
-                                           :ssl.truststore.password "password"}
-                              :principals {:user1 {:kafka           {:ssl.keystore.location   ""
-                                                                     :ssl.truststore.location ""}
-                                                   :schema-registry {:username ""
-                                                                     :password ""}}}
-                              :topics     {:topic1 {:name      "some_topic1"
-                                                    :principal :user1}
-                                           :topic2 {:name      "some_topic2"
-                                                    :principal :user1}}}}})
-
-{:environments {:env1 {:kafka  {:bootstrap.servers "localhost:21556"}
-                       :topics {:topic1 {:name "topic1"}
-                                :topic2 {:name "topic2"}}}}}
+(s/def ::config (s/keys :req-un [::environments]
+                        :opt-un [::topics ::principals]))
 
 (defn normalize-kafka-config
   [kafka-config]
@@ -81,21 +53,46 @@
   (let [config-file-path (str (System/getProperty "user.home") "/.config/cljka/config.edn")]
     (log/info "Loading configuration from file..." {:file config-file-path})
     (if (.exists (io/file config-file-path))
-      (->> (slurp config-file-path)
-           (edn/read-string)
-           (s/assert ::config))
+      (let [config (->> (slurp config-file-path)
+                        (edn/read-string))]
+        (when-not (s/valid? ::config config)
+          (println "@@@@@@ INVALID CONFIGURATION! @@@@@@")
+          (s/explain ::config config))
+        config)
       {})))
+
+(defn- ->environment-kafka-config
+  [config environment]
+  (if-let [environment-config (-> config :environments environment :kafka)]
+    environment-config
+    (throw (ex-info "Environment could not be found." {:environment environment}))))
+
+(defn- ->principal-kafka-config
+  [config environment principal]
+  (if-let [principal-config (merge (-> config :principals principal :kafka)
+                                   (-> config :environments environment :principals principal :kafka))]
+    principal-config
+    (throw (ex-info "Principal could not be found." {:principal principal}))))
+
+(defn- ->topic-config
+  [config environment topic]
+  (when (keyword? topic)
+    (if-let [topic-config (merge (-> config :topics topic)
+                                 (-> config :environments environment :topics topic))]
+      topic-config
+      (throw (ex-info "Topic could not be found." {:topic topic})))))
 
 (defn ->kafka-config
   "Selects and merges kafka config based on either a) a principal (if one has been selected with with-principal); b) a topic
   (based on the principal assigned to that topic in the configuration); or c) just the core kafka config if (a) and (b) fail."
   [config environment topic]
-  (let [core-kafka-config      (-> config :environments environment :kafka)
-        principal              (cond
-                                 (some? *principal*) *principal*
-                                 (keyword? topic) (-> config :environments environment :topics topic :principal))
-        principal-kafka-config (some-> config :environments environment :principals principal :kafka)]
-    (->> (merge core-kafka-config principal-kafka-config)
+  (let [environment-kafka-config (->environment-kafka-config config environment)
+        topic-config             (->topic-config config environment topic)
+        principal                (cond
+                                   (some? *principal*) *principal*
+                                   (some? topic-config) (:principal topic-config))
+        principal-kafka-config   (some->> principal (->principal-kafka-config config environment))]
+    (->> (merge environment-kafka-config principal-kafka-config)
          (normalize-kafka-config))))
 
 (defmacro with-principal
