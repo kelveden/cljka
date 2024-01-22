@@ -1,7 +1,7 @@
 (ns cljka.core
   (:require [cljka.kafka :as kafka]
             [cljka.confirm :refer [with-confirmation]]
-            [cljka.config :refer [load-config ->kafka-config]]
+            [cljka.config :refer [load-config ->kafka-config ->topic-config]]
             [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
             [clojure.string]))
@@ -25,7 +25,9 @@
 (defn- ->topic-name
   [config environment topic]
   (if (keyword? topic)
-    (if-let [topic-name (some-> config :environments environment :topics topic :name)]
+    (if-let [topic-name (some-> config
+                                (->topic-config environment topic)
+                                :name)]
       topic-name
       (throw (RuntimeException. (format "Could not find a topic name matching %s" topic))))
     topic))
@@ -174,6 +176,18 @@
                      :partition nat-int?
                      :consumer-group ::consumer-group
                      :offset ::offset)
+        :ret nil?)
+
+(defn get-kafka-config
+  "Returns the configuration map that will be used in cljka operations for the specified environment and topic. Useful
+  for diagnosing problems."
+  [environment topic]
+  (-> (load-config)
+      (->kafka-config environment topic)))
+
+(s/fdef get-kafka-config
+        :args (s/cat :environment ::environment
+                     :topic ::topic)
         :ret nil?)
 
 (stest/instrument)

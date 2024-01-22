@@ -74,7 +74,7 @@
     principal-config
     (throw (ex-info "Principal could not be found." {:principal principal}))))
 
-(defn- ->topic-config
+(defn ->topic-config
   [config environment topic]
   (when (keyword? topic)
     (if-let [topic-config (merge (-> config :topics topic)
