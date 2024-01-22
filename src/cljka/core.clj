@@ -2,11 +2,21 @@
   (:require [cljka.kafka :as kafka]
             [cljka.confirm :refer [with-confirmation]]
             [cljka.config :refer [load-config ->kafka-config ->topic-config]]
+            [cljka.channel :as channel]
+            [clojure.core.async :as async]
+            [clojure.core.async.impl.protocols :as async-protocols]
             [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
-            [clojure.string]))
+            [clojure.string]
+            [taoensso.timbre :as log]
+            [tick.core :as t])
+  (:import (java.time Duration)
+           (java.util.concurrent TimeUnit)
+           (org.apache.kafka.clients.consumer Consumer)))
 
 (s/check-asserts true)
+
+(s/def ::kafka-config (s/map-of ::non-blank-string ::non-blank-string))
 
 (s/def ::non-blank-string (s/and string? (complement clojure.string/blank?)))
 (s/def ::topic (s/or :keyword keyword?
@@ -14,10 +24,13 @@
 (s/def ::consumer-group ::non-blank-string)
 (s/def ::environment keyword?)
 
-(s/def ::kafka-config (s/map-of ::non-blank-string ::non-blank-string))
-(s/def ::partition-offsets (s/coll-of (s/cat :partition nat-int? :offset int?)))
-(s/def ::at (s/or :start :start :end :end :timestamp int?))
-(s/def ::offset (s/or :start :start :end :end :offset nat-int?))
+(s/def ::partition nat-int?)
+(s/def ::offset int?)
+(s/def ::timestamp nat-int?)
+
+(s/def ::partition-offsets (s/coll-of (s/cat :partition ::partition :offset ::offset)))
+(s/def ::offset-at (s/or :keyword #{:start :end} :timestamp ::timestamp))
+(s/def ::offset-definition (s/or :keyword #{:start :end} :offset ::offset))
 
 (s/def ::by-partition ::partition-offsets)
 (s/def ::total int?)
@@ -86,7 +99,7 @@
 (s/fdef get-offsets-at
         :args (s/cat :environment ::environment
                      :topic ::topic
-                     :at ::at)
+                     :at ::offset-at)
         :ret ::partition-offsets)
 
 (defn get-offset-at
@@ -105,7 +118,7 @@
         :args (s/cat :environment ::environment
                      :topic ::topic
                      :partition nat-int?
-                     :at ::at)
+                     :at ::offset-at)
         :ret nat-int?)
 
 (defn get-topics
@@ -175,7 +188,7 @@
                      :topic ::topic
                      :partition nat-int?
                      :consumer-group ::consumer-group
-                     :offset ::offset)
+                     :offset ::offset-definition)
         :ret nil?)
 
 (defn get-kafka-config
@@ -189,5 +202,56 @@
         :args (s/cat :environment ::environment
                      :topic ::topic)
         :ret nil?)
+
+(defn- cr->kafka-message
+  [cr]
+  {:key            (.key cr)
+   :partition      (.partition cr)
+   :offset         (.offset cr)
+   :timestamp      (-> (.timestamp cr) t/instant)
+   :timestamp-type (str (.timestampType cr))
+   :value          (.value cr)
+   :type           (type (.value cr))})
+
+(defn consume!
+  "Starts a new consumer on the specified topic from the specified point. The 'from'
+  parameter can be any of :start, :end, a numeric offset. All partitions are consumed from
+  the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
+  in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
+  [environment topic from]
+  (let [config       (load-config)
+        kafka-config (->kafka-config config environment topic)
+        topic-name   (->topic-name config environment topic)
+        consumer     (kafka/start-consumer kafka-config topic-name from)]
+    (let [ch (async/chan)]
+      (future
+        (try
+          (loop []
+            (let [messages (->> (.poll ^Consumer consumer (Duration/ofMillis 3000))
+                                (map cr->kafka-message))]
+              ; Push filtered messages to the channel
+              (doseq [msg messages]
+                (when (not (async-protocols/closed? ch))
+                  (async/>!! ch msg)))
+
+              (when (not (async-protocols/closed? ch))
+                (recur))))
+
+          (catch Throwable e
+            (println e)
+            (log/error e))
+
+          (finally
+            (.close consumer 0 TimeUnit/SECONDS)
+            (async/close! ch)
+            (println "Consumer closed."))))
+      ch)))
+
+(s/fdef consume!
+        :args (s/cat :environment ::environment
+                     :topic ::topic
+                     :from (s/or :offset ::offset-definition
+                                 :partition-offsets (s/coll-of (s/cat :partition ::partition :offset ::offset-definition))))
+        :ret ::channel/channel)
 
 (stest/instrument)

@@ -336,7 +336,7 @@
 
 
 ;------------------------------------------------
-(comment kafka/consume)
+(comment kafka/start-consumer)
 ;------------------------------------------------
 
 (defn- default-consumer-config
@@ -357,7 +357,7 @@
 
     ; WHEN consumption is started at the beginning of the topic.
     (with-open [consumer (-> (default-consumer-config)
-                             (kafka/consume! topic :start))]
+                             (kafka/start-consumer topic :start))]
       (let [consumed (.poll consumer (Duration/ofSeconds 1))]
         ; THEN all messages are consumed
         (is (= (set messages)
@@ -377,7 +377,7 @@
 
     ; WHEN consumption is started at the end of the topic.
     (with-open [consumer (-> (default-consumer-config)
-                             (kafka/consume! topic :end))]
+                             (kafka/start-consumer topic :end))]
       (let [consumed (.poll consumer (Duration/ofSeconds 0))]
         ; THEN no messages are consumed
         (is (empty? consumed))))))
@@ -394,9 +394,9 @@
 
     ; WHEN consumption is started at a specific point on the topic.
     (with-open [consumer1 (-> (default-consumer-config)
-                              (kafka/consume! topic [[0 :start] [1 :start]]))
+                              (kafka/start-consumer topic [[0 :start] [1 :start]]))
                 consumer2 (-> (default-consumer-config)
-                              (kafka/consume! topic [[2 :start] [3 :start]]))]
+                              (kafka/start-consumer topic [[2 :start] [3 :start]]))]
       (let [consumed1 (.poll consumer1 (Duration/ofSeconds 1))
             consumed2 (.poll consumer2 (Duration/ofSeconds 1))]
         ; THEN all messages from the topic are consumed by individual partition
@@ -418,7 +418,7 @@
 
       ; WHEN consumption is started at a specific point on the topic.
       (with-open [consumer (-> (default-consumer-config)
-                               (kafka/consume! topic (+ start 400)))]
+                               (kafka/start-consumer topic (+ start 400)))]
         (let [consumed (.poll consumer (Duration/ofSeconds 1))]
           ; THEN all messages from the topic are consumed by individual partition
           (is (= 60 (.count consumed))))))))

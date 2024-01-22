@@ -121,3 +121,8 @@
            (doseq [sink sinks] (async/close! sink)))))))
   ([channel sinks]
    (to! channel sinks {})))
+
+(defn close!
+  "Closes the specified channel."
+  [ch]
+  (async/close! ch))

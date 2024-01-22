@@ -3,8 +3,7 @@
   (:import (java.util HashMap)
            (org.apache.kafka.clients.admin AdminClient OffsetSpec)
            (org.apache.kafka.clients.consumer KafkaConsumer OffsetAndMetadata)
-           (org.apache.kafka.common TopicPartition)
-           (org.apache.kafka.common.serialization Deserializer StringDeserializer)))
+           (org.apache.kafka.common TopicPartition)))
 
 ; TODO: move to core namespace along with all other configuration merging logic
 (defn ->topic-name
@@ -138,7 +137,7 @@
       (sort)
       (vec)))
 
-(defn consume!
+(defn start-consumer
   "Starts a new consumer on the specified topic from the specified point. The 'from'
   parameter can be any of :start, :end, a numeric offset. All partitions are consumed from
   the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
