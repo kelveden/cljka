@@ -22,11 +22,6 @@ scan:
 ancient:
 	@clojure -M:outdated
 
-# AOT compile classes
-build:
-	mkdir -p classes
-	@clojure -M:build
-
 # Build documentation
 codox:
 	rm docs -rf

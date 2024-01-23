@@ -12,8 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/prepare-clojure
-      - run: make build
-        shell: bash
       - run: make test
         shell: bash
   generate-docs:
@@ -24,8 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/prepare-clojure
-      - run: make build
-        shell: bash
       - run: |
           make codox
           
