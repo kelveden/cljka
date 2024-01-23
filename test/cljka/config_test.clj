@@ -1,7 +1,7 @@
 (ns cljka.config-test
   (:require [clojure.spec.alpha :as s]
             [clojure.test :refer :all]
-            [cljka.config :refer [->kafka-config with-principal] :as config])
+            [cljka.config :refer [->kafka-config with-principal ->deserialization-config] :as config])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest sample-config-is-valid
@@ -112,3 +112,13 @@
             "user-field1" "value1"}
            (->kafka-config config :my-env :topic1)))))
 
+(deftest deserialization-config-is-merged-by-root-environment-topic
+  (let [config {:deserialization {:prop1 :a
+                                  :prop2 :b
+                                  :prop3 :c}
+                :environments    {:my-env {:deserialization {:prop2 :d
+                                                             :prop3 :e}}}
+                :topics          {:topic1 {:deserialization {:prop3 :f
+                                                             :prop4 :g}}}}]
+    (is (= {:prop1 :a :prop2 :d :prop3 :f :prop4 :g}
+           (->deserialization-config config :my-env :topic1)))))

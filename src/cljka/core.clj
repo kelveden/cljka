@@ -1,7 +1,8 @@
 (ns cljka.core
-  (:require [cljka.kafka :as kafka]
+  (:require [cheshire.core :as json]
+            [cljka.kafka :as kafka]
             [cljka.confirm :refer [with-confirmation]]
-            [cljka.config :refer [load-config ->kafka-config ->topic-config]]
+            [cljka.config :refer [load-config ->kafka-config ->topic-config ->deserialization-config]]
             [cljka.channel :as channel]
             [clojure.core.async :as async]
             [clojure.core.async.impl.protocols :as async-protocols]
@@ -11,7 +12,7 @@
             [taoensso.timbre :as log]
             [tick.core :as t])
   (:import (java.time Duration)
-           (java.util.concurrent TimeUnit)
+           (java.util UUID)
            (org.apache.kafka.clients.consumer Consumer)))
 
 (s/check-asserts true)
@@ -203,48 +204,50 @@
                      :topic ::topic)
         :ret nil?)
 
-(defn- cr->kafka-message
-  [cr]
-  {:key            (.key cr)
-   :partition      (.partition cr)
-   :offset         (.offset cr)
-   :timestamp      (-> (.timestamp cr) t/instant)
-   :timestamp-type (str (.timestampType cr))
-   :value          (.value cr)
-   :type           (type (.value cr))})
-
 (defn consume!
   "Starts a new consumer on the specified topic from the specified point. The 'from'
   parameter can be any of :start, :end, a numeric offset. All partitions are consumed from
   the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
   in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
   [environment topic from]
-  (let [config       (load-config)
-        kafka-config (->kafka-config config environment topic)
-        topic-name   (->topic-name config environment topic)
-        consumer     (kafka/start-consumer kafka-config topic-name from)]
+  (let [config                 (load-config)
+        kafka-config           (-> (->kafka-config config environment topic)
+                                   (assoc "group.id" (str "cljka-" (UUID/randomUUID))))
+        deserialization-config (->deserialization-config config environment topic)
+        topic-name             (->topic-name config environment topic)
+        consumer               (kafka/start-consumer kafka-config topic-name from)
+        json?                  (some-> deserialization-config :json?)
+        cr->message            (fn [cr] {:key            (.key cr)
+                                         :partition      (.partition cr)
+                                         :offset         (.offset cr)
+                                         :timestamp      (-> (.timestamp cr) t/instant)
+                                         :timestamp-type (str (.timestampType cr))
+                                         :value          (cond-> (.value cr)
+                                                                 json? (-> (str)
+                                                                           (json/parse-string true)))
+                                         :type           (type (.value cr))})]
     (let [ch (async/chan)]
-      (future
+      (async/go
         (try
           (loop []
-            (let [messages (->> (.poll ^Consumer consumer (Duration/ofMillis 3000))
-                                (map cr->kafka-message))]
-              ; Push filtered messages to the channel
+            (let [messages (->> (.poll ^Consumer consumer (Duration/ofMillis 1000))
+                                (map cr->message))]
+              ; Push messages to the channel
               (doseq [msg messages]
-                (when (not (async-protocols/closed? ch))
-                  (async/>!! ch msg)))
+                (when-not (async-protocols/closed? ch)
+                  (async/>! ch msg)))
 
-              (when (not (async-protocols/closed? ch))
+              ; Get the next batch of messages
+              (when-not (async-protocols/closed? ch)
                 (recur))))
 
           (catch Throwable e
-            (println e)
             (log/error e))
 
           (finally
-            (.close consumer 0 TimeUnit/SECONDS)
+            (.close consumer)
             (async/close! ch)
-            (println "Consumer closed."))))
+            (log/report "Consumer closed."))))
       ch)))
 
 (s/fdef consume!

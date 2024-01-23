@@ -112,3 +112,16 @@ configuration:
 * [`value.serializer`](https://kafka.apache.org/documentation/#producerconfigs_value.serializer)
 * [`key.deserializer`](https://kafka.apache.org/documentation/#consumerconfigs_key.deserializer)
 * [`value.deserializer`](https://kafka.apache.org/documentation/#consumerconfigs_value.deserializer)
+
+### Deserializing avro as EDN
+Note that the [KafkaAvroDeserializer](https://github.com/confluentinc/schema-registry/blob/master/avro-serializer/src/main/java/io/confluent/kafka/serializers/KafkaAvroDeserializer.java)
+will just return the JSON payload wrapped in an object. Typically, when working with Clojure you'll want to view it as EDN instead.
+cljka provides a post-deserialization configuration for doing this that can be defined at the root, environment or even topic level:
+
+```clojure
+{:deserialization
+ {:json? true}}
+```
+
+Adding this configuration mean that any value deserialized will automatically be stringified and then parsed as JSON. It's
+designed to be used with the `KafkaAvroDeserializer` but will potentially work with other deserializers too.

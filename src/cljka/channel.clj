@@ -123,6 +123,13 @@
    (to! channel sinks {})))
 
 (defn close!
-  "Closes the specified channel."
+  "Closes the specified channel; emptying it first "
   [ch]
-  (async/close! ch))
+  (async/close! ch)
+  (async/poll! ch)
+  nil)
+
+(defn poll!
+  "Polls the specified channel"
+  [ch]
+  (async/poll! ch))

@@ -3,7 +3,8 @@
             [clojure.repl :refer [dir-fn]]
             [taoensso.timbre :refer [set-min-level!]]
             [cljka.core :refer :all]
-            [cljka.channel :refer :all]))
+            [cljka.channel :refer :all]
+            [clojure.core.async :as async]))
 
 (set-min-level! :warn)
 

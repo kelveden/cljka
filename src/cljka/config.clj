@@ -32,13 +32,17 @@
 (s/def ::environment (s/keys :req-un [::kafka]
                              :opt-un [::principals ::topics]))
 
+; deserialization
+(s/def :deserialization/json? boolean?)
+(s/def ::deserialization (s/keys :opt-un [:deserialization/json?]))
+
 ;
 ; config
 ;
 
 (s/def ::environments (s/map-of keyword? ::environment))
 (s/def ::config (s/keys :req-un [::environments]
-                        :opt-un [::topics ::principals]))
+                        :opt-un [::topics ::principals ::deserialization]))
 
 (defn normalize-kafka-config
   [kafka-config]
@@ -94,6 +98,14 @@
         principal-kafka-config   (some->> principal (->principal-kafka-config config environment))]
     (->> (merge environment-kafka-config principal-kafka-config)
          (normalize-kafka-config))))
+
+(defn ->deserialization-config
+  "Selects and merges deserialization config."
+  [config environment topic]
+  (merge
+    (-> config :deserialization)
+    (-> config :environments environment :deserialization)
+    (-> config (->topic-config environment topic) :deserialization)))
 
 (defmacro with-principal
   [principal & body]
