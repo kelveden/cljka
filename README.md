@@ -2,6 +2,9 @@
 
 ![cljka](https://github.com/kelveden/cljka/actions/workflows/trunk-build.yaml/badge.svg)
 
+> **WARNING**: This repository is under active development right now and should very much be considered a work in progress:
+> i.e. the API is open to change. That being said, I don't foresee anything major changing on the API right now.
+
 A Clojure REPL-based tool for working with kafka.
 
 ## Usage
