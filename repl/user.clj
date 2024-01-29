@@ -24,12 +24,11 @@
 ;--- Cached configuration
 ;
 
-(def ^:no-doc config (atom nil))
-
 (defn reload!
   "Reloads the configuration from file."
   []
-  (reset! config (load-config)))
+  (set-config!
+    (load-config)))
 
 (reload!)
 

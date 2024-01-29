@@ -2,7 +2,7 @@
   (:require [cheshire.core :as json]
             [cljka.kafka :as kafka]
             [cljka.confirm :refer [with-confirmation]]
-            [cljka.config :refer [load-config ->kafka-config ->topic-config ->deserialization-config]]
+            [cljka.config :refer [->kafka-config ->topic-config ->deserialization-config]]
             [cljka.channel :as channel]
             [clojure.core.async :as async]
             [clojure.core.async.impl.protocols :as async-protocols]
@@ -14,6 +14,8 @@
   (:import (java.time Duration)
            (java.util UUID)
            (org.apache.kafka.clients.consumer Consumer)))
+
+(def ^:no-doc config (atom nil))
 
 (s/check-asserts true)
 
@@ -36,6 +38,10 @@
 (s/def ::by-partition ::partition-offsets)
 (s/def ::total int?)
 
+(defn set-config!
+  [new-config]
+  (reset! config new-config))
+
 (defn- ->topic-name
   [config environment topic]
   (if (keyword? topic)
@@ -48,10 +54,9 @@
 
 (defn- create-client
   [environment & [topic]]
-  (let [config       (load-config)
-        kafka-config (->kafka-config config environment topic)]
+  (let [kafka-config (->kafka-config @config environment topic)]
     {:client       (kafka/->admin-client kafka-config)
-     :config       config
+     :config       @config
      :kafka-config kafka-config}))
 
 (defn get-partitions
@@ -196,8 +201,7 @@
   "Returns the configuration map that will be used in cljka operations for the specified environment and topic. Useful
   for diagnosing problems."
   [environment topic]
-  (-> (load-config)
-      (->kafka-config environment topic)))
+  (->kafka-config @config environment topic))
 
 (s/fdef get-kafka-config
         :args (s/cat :environment ::environment
@@ -210,11 +214,10 @@
   the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
   in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
   [environment topic from]
-  (let [config                 (load-config)
-        kafka-config           (-> (->kafka-config config environment topic)
+  (let [kafka-config           (-> (->kafka-config @config environment topic)
                                    (assoc "group.id" (str "cljka-" (UUID/randomUUID))))
-        deserialization-config (->deserialization-config config environment topic)
-        topic-name             (->topic-name config environment topic)
+        deserialization-config (->deserialization-config @config environment topic)
+        topic-name             (->topic-name @config environment topic)
         consumer               (kafka/start-consumer kafka-config topic-name from)
         json?                  (some-> deserialization-config :json?)
         cr->message            (fn [cr] {:key            (.key cr)
@@ -225,30 +228,30 @@
                                          :value          (cond-> (.value cr)
                                                                  json? (-> (str)
                                                                            (json/parse-string true)))
-                                         :type           (type (.value cr))})]
-    (let [ch (async/chan)]
-      (async/go
-        (try
-          (loop []
-            (let [messages (->> (.poll ^Consumer consumer (Duration/ofMillis 1000))
-                                (map cr->message))]
-              ; Push messages to the channel
-              (doseq [msg messages]
-                (when-not (async-protocols/closed? ch)
-                  (async/>! ch msg)))
-
-              ; Get the next batch of messages
+                                         :type           (type (.value cr))})
+        ch                     (async/chan)]
+    (future
+      (try
+        (loop []
+          (let [messages (->> (.poll ^Consumer consumer (Duration/ofMillis 1000))
+                              (map cr->message))]
+            ; Push messages to the channel
+            (doseq [msg messages]
               (when-not (async-protocols/closed? ch)
-                (recur))))
+                (async/>!! ch msg)))
 
-          (catch Throwable e
-            (log/error e))
+            ; Get the next batch of messages
+            (when-not (async-protocols/closed? ch)
+              (recur))))
 
-          (finally
-            (.close consumer)
-            (async/close! ch)
-            (log/report "Consumer closed."))))
-      ch)))
+        (catch Throwable e
+          (log/error e))
+
+        (finally
+          (.close consumer)
+          (async/close! ch)
+          (log/report "Consumer closed."))))
+    ch))
 
 (s/fdef consume!
         :args (s/cat :environment ::environment

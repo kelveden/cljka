@@ -17,10 +17,10 @@
 
 (defn ^:no-doc recur-to-sink!
   "Read messages from the incoming channel, writing each message to a sink via the unary sink-fn."
-  [ch sink-fn {:keys [pred n] :or {pred any?
-                                   n    nil}}]
+  [sink-channel sink-fn {:keys [pred n] :or {pred any?
+                                             n    nil}}]
   (try
-    (loop [next            (async/<!! ch)
+    (loop [next            (async/<!! sink-channel)
            processed-count 0]
       (when next
         (let [process?  (pred next)
@@ -30,17 +30,17 @@
 
           ; Limit looping to n invocations of f
           (when (and (some? n) (>= new-count n))
-            (async/close! ch))
+            (async/close! sink-channel))
 
-          (when-not (closed? ch)
-            (recur (async/<!! ch) new-count)))))
+          (when-not (closed? sink-channel)
+            (recur (async/<!! sink-channel) new-count)))))
 
     (catch Exception e
       (log/error e))))
 
 (defmulti
-  sink
-  "Create a new channel for messages to sink to.
+  sink-chan
+  "Wraps the given sink target in a channel to sink messages to.
 
   The first argument is the sink target. Target types supported out of the box are:
 
@@ -66,70 +66,65 @@
   | `:serializer`        | `pprint` | function taking an object and `java.io.Writer` that will be used to serialize the object to the Writer. |"
   (fn [o & _] (type o)))
 
-(defmethod sink Atom
+(defmethod sink-chan Atom
   [^Atom a & [opts]]
-  (let [ch (async/chan)]
+  (let [sink-channel (async/chan)]
     (future
-      (recur-to-sink! ch #(swap! a conj %) opts))
-    ch))
+      (recur-to-sink! sink-channel #(swap! a conj %) opts))
+    sink-channel))
 
-(defmethod sink Writer
+(defmethod sink-chan Writer
   [^Writer w & [{:keys [serializer]
                  :or   {serializer pprint}
                  :as   opts}]]
-  (let [ch (async/chan)]
+  (let [sink-channel (async/chan)]
     (future
       (try
-        (recur-to-sink! ch #(serializer % w) opts)
+        (recur-to-sink! sink-channel #(serializer % w) opts)
         (finally
           (.close w))))
-    ch))
+    sink-channel))
 
-(defmethod sink File
+(defmethod sink-chan File
   [^File f & [opts]]
   (let [w (apply io/writer (->> (into [] opts)
                                 (flatten)
                                 (cons f)))]
-    (sink w opts)))
+    (sink-chan w opts)))
 
-(defmethod sink String
+(defmethod sink-chan String
   [^String filename & [opts]]
-  (sink (io/file filename) opts))
+  (sink-chan (io/file filename) opts))
+
+(defn to-chan!
+  "Starts piping data from the specified input channel to the specified sink channel.
+
+  | key                 | default | description |
+  |:--------------------|:--------|:------------|
+  | `:close-sink?`      | `true`  | Whether to close the sink channel once the input channel closes. |"
+  [in-channel sink-channel & [{:keys [close-sink?]
+                               :or   {close-sink? true}}]]
+  (async/pipe in-channel sink-channel close-sink?))
 
 (defn to!
-  "Starts sending data from the specified input channel to the specified sink(s).
+  "Starts piping data from the specified input channel to the specified sink target. For more control over the
+  sink channel itself, wrap the sink target use to-chan! instead.
 
-  | key                  | default | description |
-  |:---------------------|:--------|:------------|
-  | `:close-sinks?`      | `true`  | Whether to close all sinks once the input channel closes. |"
-  ([channel sinks {:keys [close-sinks?]
-                   :or   {close-sinks? true}}]
-   (future
-     (try
-       (loop [next (async/<!! channel)]
-         (when next
-           (doseq [sink sinks] (async/>!! sink next))
-           (recur (async/<!! channel))))
-
-       (println :sending-to-sinks-completed)
-
-       (catch Exception e
-         (log/error e))
-
-       (finally
-         (when close-sinks?
-           (doseq [sink sinks] (async/close! sink)))))))
-  ([channel sinks]
-   (to! channel sinks {})))
+  | key                 | default | description |
+  |:--------------------|:--------|:------------|
+  | `:close-sink?`      | `true`  | Whether to close the sink destination once the input channel closes. |"
+  [in-channel sink-target & [{:keys [close-sink?]
+                              :or   {close-sink? true}}]]
+  (to-chan! in-channel (sink-chan sink-target) {:close-sink? close-sink?}))
 
 (defn close!
-  "Closes the specified channel; emptying it first "
-  [ch]
-  (async/close! ch)
-  (async/poll! ch)
+  "Closes the specified channel; emptying it first."
+  [channel]
+  (async/close! channel)
+  (async/poll! channel)
   nil)
 
 (defn poll!
   "Polls the specified channel"
-  [ch]
-  (async/poll! ch))
+  [channel]
+  (async/poll! channel))

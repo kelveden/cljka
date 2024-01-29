@@ -22,10 +22,8 @@
   (let [input-ch (async/chan 10)
         data     (vec (range 0 9))
         a        (atom [])
-        sink     (channel/sink a)]
-    ; AND an atom sink
-    (channel/to! input-ch [sink])
-
+        ; AND an atom sink
+        sink     (channel/to! input-ch a)]
     ; WHEN data arrives in the input channel
     (doseq [x data]
       (async/>!! input-ch x))
@@ -35,34 +33,26 @@
     ; AND the sink is kept open for more data
     (is (not (async-protocols/closed? sink)))))
 
-(deftest sink-channels-close-once-input-channel-closes
+(deftest sink-channel-closes-once-input-channel-closes
   ; GIVEN an input channel
   (let [input-ch (async/chan)
-        a1       (atom [])
-        a2       (atom [])
-        sink1    (channel/sink a1)
-        sink2    (channel/sink a2)]
-    ; AND sinks
-    (channel/to! input-ch [sink1 sink2])
-
-    (is (false? (async-protocols/closed? sink1)))
-    (is (false? (async-protocols/closed? sink2)))
+        a        (atom [])
+        ; AND sink
+        sink     (channel/to! input-ch a)]
+    (is (false? (async-protocols/closed? sink)))
 
     ; WHEN the input channel closes
     (async/close! input-ch)
 
-    ; THEN the sinks are eventually closed
-    (is-eventually? (async-protocols/closed? sink1))
-    (is-eventually? (async-protocols/closed? sink2))))
+    ; THEN the sink is eventually closed
+    (is-eventually? (async-protocols/closed? sink))))
 
 (deftest can-stop-sink-channel-closing-once-input-channel-closes
   ; GIVEN an input channel
   (let [input-ch (async/chan)
         a        (atom [])
-        sink     (channel/sink a)]
-    ; AND a sink with an explicit instruction NOT to close it
-    (channel/to! input-ch [sink] {:close-sinks? false})
-
+        ; AND a sink with an explicit instruction NOT to close it
+        sink     (channel/to! input-ch a {:close-sink? false})]
     (is (false? (async-protocols/closed? sink)))
 
     ; WHEN the input channel closes
@@ -75,9 +65,9 @@
   ; GIVEN an input channel
   (let [input-ch (async/chan 10)
         a        (atom [])
-        sink     (channel/sink a {:n 3})]
+        sink     (channel/sink-chan a {:n 3})]
     ; AND an atom sink with a maximum of 3 items
-    (channel/to! input-ch [sink])
+    (channel/to-chan! input-ch sink)
 
     ; WHEN fewer than N items arrives in the input channel
     (doseq [x [0 1]]
@@ -102,9 +92,9 @@
   (let [input-ch (async/chan 10)
         data     (vec (range 0 9))
         a        (atom [])
-        sink     (channel/sink a {:pred odd?})]
+        sink     (channel/sink-chan a {:pred odd?})]
     ; AND an atom sink with a maximum of 3 items
-    (channel/to! input-ch [sink])
+    (channel/to-chan! input-ch sink)
 
     ; WHEN data arrives in the input channel
     (doseq [x data]
@@ -120,9 +110,9 @@
   (let [input-ch (async/chan 10)
         data     (vec (range 0 9))
         a        (atom [])
-        sink     (channel/sink a {:pred odd? :n 2})]
+        sink     (channel/sink-chan a {:pred odd? :n 2})]
     ; AND an atom sink with a maximum of 3 items
-    (channel/to! input-ch [sink])
+    (channel/to-chan! input-ch sink)
 
     ; WHEN data arrives in the input channel
     (doseq [x data]
@@ -138,10 +128,8 @@
   (let [input-ch (async/chan 10)
         data     (vec (range 0 9))
         file     (File/createTempFile (str (UUID/randomUUID)) ".txt")
-        sink     (channel/sink file)]
-    ; AND a file sink
-    (channel/to! input-ch [sink])
-
+        ; AND a file sink
+        sink     (channel/to! input-ch file)]
     ; WHEN data arrives in the input channel
     (doseq [x data]
       (async/>!! input-ch x))
@@ -157,10 +145,8 @@
   (let [input-ch (async/chan 10)
         data     (vec (range 0 9))
         path     (.getAbsolutePath (File/createTempFile (str (UUID/randomUUID)) ".txt"))
-        sink     (channel/sink path)]
-    ; AND a file sink
-    (channel/to! input-ch [sink])
-
+        ; AND a file sink
+        sink     (channel/to! input-ch path)]
     ; WHEN data arrives in the input channel
     (doseq [x data]
       (async/>!! input-ch x))
@@ -177,10 +163,10 @@
     ; AND an input channel
     (let [input-ch (async/chan 10)
           data     [0 1 2 3]
-          sink     (channel/sink sw {:serializer (fn [s w]
-                                                   (.write w (format "{%s}" s)))})]
+          sink     (channel/sink-chan sw {:serializer (fn [s w]
+                                                        (.write w (format "{%s}" s)))})]
       ; AND a file sink
-      (channel/to! input-ch [sink])
+      (channel/to-chan! input-ch sink)
 
       ; WHEN data arrives in the input channel
       (doseq [x data]
@@ -200,8 +186,8 @@
     (spit file "whatever")
 
     ; AND a file sink to the file that WILL append
-    (let [append-sink (channel/sink file {:append true})]
-      (channel/to! input-ch [append-sink])
+    (let [append-sink (channel/sink-chan file {:append true})]
+      (channel/to-chan! input-ch append-sink)
 
       ; WHEN data arrives in the input channel
       (doseq [x [0 1]]
@@ -211,8 +197,8 @@
       (is-eventually? (= "whatever0\n1\n" (slurp file))))
 
     ; BUT when a file sink to the file is created that will NOT append
-    (let [no-append-sink (channel/sink file {:append false})]
-      (channel/to! input-ch [no-append-sink])
+    (let [no-append-sink (channel/sink-chan file {:append false})]
+      (channel/to-chan! input-ch no-append-sink)
 
       ; WHEN data arrives in the input channel
       (doseq [x [2 3]]

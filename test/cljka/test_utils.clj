@@ -95,11 +95,8 @@
    (with-consumer StringDeserializer StringDeserializer (str (UUID/randomUUID)) f)))
 
 (defn with-producer
-  ([key-serializer value-serializer f]
-   (let [config (-> *kafka-config*
-                    (merge {:key.serializer   key-serializer
-                            :value.serializer value-serializer})
-                    (normalize-kafka-config))]
+  ([kafka-config f]
+   (let [config (normalize-kafka-config kafka-config)]
      (log/reportf "==> Starting a producer with config %s." config)
      (let [producer (KafkaProducer. ^HashMap config)]
        (try
@@ -107,6 +104,12 @@
          (finally
            (.close producer (Duration/ofSeconds 0))
            (log/reportf "==> Closed producer with config %s." config))))))
+
+  ([key-serializer value-serializer f]
+   (with-producer (-> *kafka-config*
+                      (merge {:key.serializer   key-serializer
+                              :value.serializer value-serializer})) f))
+  
   ([f]
    (with-producer StringSerializer StringSerializer f)))
 
