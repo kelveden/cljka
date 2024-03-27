@@ -110,12 +110,20 @@
   "Starts piping data from the specified input channel to the specified sink target. For more control over the
   sink channel itself, wrap the sink target use to-chan! instead.
 
+  Support options:
+
   | key                 | default | description |
   |:--------------------|:--------|:------------|
-  | `:close-sink?`      | `true`  | Whether to close the sink destination once the input channel closes. |"
+  | `:close-sink?`      | `true`  | Whether to close the sink destination once the input channel closes. |
+
+  Any other specified options are passed as arguments to `sink-chan` when creating the sink channel. See the documentation
+  for `sink-chan` for more details."
   [in-channel sink-target & [{:keys [close-sink?]
-                              :or   {close-sink? true}}]]
-  (to-chan! in-channel (sink-chan sink-target) {:close-sink? close-sink?}))
+                              :or   {close-sink? true}
+                              :as   opts}]]
+  (let [sink-opts    (dissoc opts :close-sink?)
+        sink-channel (sink-chan sink-target sink-opts)]
+    (to-chan! in-channel sink-channel {:close-sink? close-sink?})))
 
 (defn close!
   "Closes the specified channel; emptying it first."

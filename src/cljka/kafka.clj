@@ -62,7 +62,7 @@
     (OffsetSpec/forTimestamp at)))
 
 (defn get-offsets-at
-  "Gets the offsets for the given topic at the specified point in time.
+  "Gets the offsets for the given topic at the specified point.
 
   'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
   [^AdminClient kafka-admin-client topic at]
@@ -80,7 +80,7 @@
              (vec))))
 
 (defn get-offset-at
-  "Gets the offset for the specified topic partition at the specified point in time.
+  "Gets the offsets for the given topic partition at the specified point.
 
   'at' can either be :start, :end or an epoch millis long (representing an epoch time)."
   [^AdminClient kafka-admin-client topic partition at]

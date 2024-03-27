@@ -93,7 +93,9 @@
 (defn get-offsets-at
   "Gets the offsets for the partitions of a topic at a particular point in time.
 
-  `at` can be `:start`, `:end` or a number representing an epoch milli point in time."
+  `at` can either be :start, :end or an epoch millis long (representing an epoch time). If epoch millis are specified
+  then the offset for each partition will be the first one with a timestamp after the specified point in time - -1 will
+  be returned if such offset can be found."
   [environment topic at]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -111,7 +113,9 @@
 (defn get-offset-at
   "Gets the offset for the specified partition of a topic at a particular point in time.
 
-  `at` can be `:start`, `:end` or a number representing an epoch milli point in time."
+  `at` can either be :start, :end or an epoch millis long (representing an epoch time). If epoch millis are specified
+  then the offset will be the first one with a timestamp after the specified point in time - -1 will
+  be returned if such offset can be found."
   [environment topic partition at]
   (let [{:keys [client config]}
         (create-client environment topic)
@@ -214,8 +218,9 @@
   the specified point. Alternatively, 'from' can be used to focus the consumer on specific partitions on the topic -
   in which case it will be a collection of partition/from pairs e.g. [[0 :start] [1 1412]]."
   [environment topic from]
-  (let [kafka-config           (-> (->kafka-config @config environment topic)
-                                   (assoc "group.id" (str "cljka-" (UUID/randomUUID))))
+  (let [consumer-group         (str "cljka-" (UUID/randomUUID))
+        kafka-config           (-> (->kafka-config @config environment topic)
+                                   (assoc "group.id" consumer-group))
         deserialization-config (->deserialization-config @config environment topic)
         topic-name             (->topic-name @config environment topic)
         consumer               (kafka/start-consumer kafka-config topic-name from)
@@ -230,6 +235,7 @@
                                                                            (json/parse-string true)))
                                          :type           (type (.value cr))})
         ch                     (async/chan)]
+    (prn (str "Consumer group: " consumer-group))
     (future
       (try
         (loop []
