@@ -31,7 +31,8 @@
 <tr><td align="left"> <code>:serializer</code>        </td><td align="left"> <code>pprint</code> </td><td align="left"> function taking an object and <code>java.io.Writer</code> that will be used to serialize the object to the Writer. </td></tr>
 </tbody>
 </table>
-</div></div></div><div class="public anchor" id="var-to.21"><h3>to!</h3><div class="usage"><code>(to! in-channel sink-target &amp; [{:keys [close-sink?], :or {close-sink? true}}])</code></div><div class="doc"><div class="markdown"><p>Starts piping data from the specified input channel to the specified sink target. For more control over the sink channel itself, wrap the sink target use to-chan! instead.</p>
+</div></div></div><div class="public anchor" id="var-to.21"><h3>to!</h3><div class="usage"><code>(to! in-channel sink-target &amp; [{:keys [close-sink?], :or {close-sink? true}, :as opts}])</code></div><div class="doc"><div class="markdown"><p>Starts piping data from the specified input channel to the specified sink target. For more control over the sink channel itself, wrap the sink target use to-chan! instead.</p>
+<p>Support options:</p>
 <table>
 <thead>
 <tr><th align="left"> key                 </th><th align="left"> default </th><th align="left"> description </th></tr>
@@ -40,6 +41,7 @@
 <tr><td align="left"> <code>:close-sink?</code>      </td><td align="left"> <code>true</code>  </td><td align="left"> Whether to close the sink destination once the input channel closes. </td></tr>
 </tbody>
 </table>
+<p>Any other specified options are passed as arguments to <code>sink-chan</code> when creating the sink channel. See the documentation for <code>sink-chan</code> for more details.</p>
 </div></div></div><div class="public anchor" id="var-to-chan.21"><h3>to-chan!</h3><div class="usage"><code>(to-chan! in-channel sink-channel &amp; [{:keys [close-sink?], :or {close-sink? true}}])</code></div><div class="doc"><div class="markdown"><p>Starts piping data from the specified input channel to the specified sink channel.</p>
 <table>
 <thead>
