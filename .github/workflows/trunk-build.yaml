@@ -30,7 +30,7 @@ jobs:
           git add --all
           
           if [ -z "$(git status --porcelain)" ]; then
-            ech "No changes to documentation detected."
+            echo "No changes to documentation detected."
           else
             git commit -m "Rebuilt documentation."
             git push origin main
