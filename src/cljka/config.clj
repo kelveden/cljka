@@ -51,6 +51,7 @@
        (map (fn [[k v]] [k (if (number? v) (int v) v)]))
        (into {})))
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn load-config
   "Reloads the cljka configuration file."
   []

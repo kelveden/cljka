@@ -14,12 +14,9 @@
   (:import (java.time Duration)
            (java.util UUID)
            (org.apache.kafka.clients.consumer Consumer)))
-
 (def ^:no-doc config (atom nil))
 
 (s/check-asserts true)
-
-(s/def ::kafka-config (s/map-of ::non-blank-string ::non-blank-string))
 
 (s/def ::non-blank-string (s/and string? (complement clojure.string/blank?)))
 (s/def ::topic (s/or :keyword keyword?
@@ -110,6 +107,7 @@
                      :at ::offset-at)
         :ret ::partition-offsets)
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn get-offset-at
   "Gets the offset for the specified partition of a topic at a particular point in time.
 
@@ -179,6 +177,7 @@
                      :partition-offsets ::partition-offsets)
         :ret nil?)
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn set-group-offset!
   "Sets the group offset on a single partition to the specified value.
 
@@ -201,6 +200,7 @@
                      :offset ::offset-definition)
         :ret nil?)
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn get-kafka-config
   "Returns the configuration map that will be used in cljka operations for the specified environment and topic. Useful
   for diagnosing problems."

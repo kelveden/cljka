@@ -1,4 +1,5 @@
 (ns user
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [taoensso.timbre :refer [set-min-level!]]
             [cljka.core :refer :all]
             [cljka.channel :refer :all]

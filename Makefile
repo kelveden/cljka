@@ -22,6 +22,9 @@ scan:
 ancient:
 	@clojure -M:outdated
 
+upgrade:
+	@clojure -M:outdated --upgrade
+
 # Build documentation
 codox:
 	rm docs -rf

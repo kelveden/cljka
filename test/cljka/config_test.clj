@@ -1,4 +1,5 @@
 (ns cljka.config-test
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [clojure.spec.alpha :as s]
             [clojure.test :refer :all]
             [cljka.config :refer [->kafka-config with-principal ->deserialization-config] :as config])

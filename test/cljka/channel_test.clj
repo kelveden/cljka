@@ -1,4 +1,5 @@
 (ns cljka.channel-test
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [cljka.channel :as channel]
             [cljka.test-utils :refer [is-eventually? is-never?]]
             [clojure.core.async :as async]

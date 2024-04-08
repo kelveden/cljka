@@ -132,6 +132,7 @@
   (async/poll! channel)
   nil)
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn poll!
   "Polls the specified channel"
   [channel]

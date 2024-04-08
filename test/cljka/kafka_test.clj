@@ -1,4 +1,5 @@
 (ns cljka.kafka-test
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [cljka.kafka :as kafka]
             [cljka.test-utils :refer [*kafka-admin-client* *kafka-config* ensure-topic! produce! with-consumer with-kafka with-producer]]
             [clojure.set :refer [subset?]]

@@ -1,4 +1,5 @@
 (ns cljka.core-test
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [clojure.test :refer :all]
             [cljka.core :as core]
             [cljka.channel :as ch]

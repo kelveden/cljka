@@ -1,4 +1,5 @@
 (ns cljka.test-utils
+  #_{:clj-kondo/ignore [:refer-all]}
   (:require [cljka.config :refer [normalize-kafka-config]]
             [cljka.kafka :as kafka]
             [clojure.string]
