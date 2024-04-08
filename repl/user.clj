@@ -19,6 +19,10 @@
 
 (reload!)
 
+(println "\\")
+(println " | Welcome to cljka. See https://github.com/kelveden/cljka?tab=readme-ov-file#usage for more information.")
+(println "/")
+
 ; The content below is used to fill the examples section in the README
 (comment
   ;
