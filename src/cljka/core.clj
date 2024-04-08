@@ -1,9 +1,9 @@
 (ns cljka.core
   (:require [cheshire.core :as json]
-            [cljka.kafka :as kafka]
-            [cljka.confirm :refer [with-confirmation]]
-            [cljka.config :refer [->kafka-config ->topic-config ->deserialization-config]]
             [cljka.channel :as channel]
+            [cljka.config :refer [->deserialization-config ->kafka-config ->topic-config]]
+            [cljka.confirm :refer [with-confirmation]]
+            [cljka.kafka :as kafka]
             [clojure.core.async :as async]
             [clojure.core.async.impl.protocols :as async-protocols]
             [clojure.spec.alpha :as s]

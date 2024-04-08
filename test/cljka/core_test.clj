@@ -1,9 +1,9 @@
 (ns cljka.core-test
   #_{:clj-kondo/ignore [:refer-all]}
-  (:require [clojure.test :refer :all]
+  (:require [cljka.channel :as ch]
             [cljka.core :as core]
-            [cljka.channel :as ch]
-            [cljka.test-utils :refer [with-kafka ensure-topic! with-producer produce! *kafka-config* is-eventually?]]
+            [cljka.test-utils :refer [*kafka-config* ensure-topic! is-eventually? produce! with-kafka with-producer]]
+            [clojure.test :refer :all]
             [taoensso.timbre :as log])
   (:import (java.util UUID)
            (org.apache.kafka.common.serialization StringDeserializer StringSerializer)))

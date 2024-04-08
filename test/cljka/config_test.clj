@@ -1,8 +1,8 @@
 (ns cljka.config-test
   #_{:clj-kondo/ignore [:refer-all]}
-  (:require [clojure.spec.alpha :as s]
-            [clojure.test :refer :all]
-            [cljka.config :refer [->kafka-config with-principal ->deserialization-config] :as config])
+  (:require [cljka.config :refer [->deserialization-config ->kafka-config with-principal] :as config]
+            [clojure.spec.alpha :as s]
+            [clojure.test :refer :all])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest sample-config-is-valid

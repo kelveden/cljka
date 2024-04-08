@@ -2,8 +2,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [clojure.walk :refer [stringify-keys]]
             [clojure.string]
+            [clojure.walk :refer [stringify-keys]]
             [taoensso.timbre :as log]))
 
 (def ^:dynamic *principal* nil)
