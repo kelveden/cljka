@@ -67,9 +67,9 @@
     (kafka/get-partitions client topic-name)))
 
 (s/fdef get-partitions
-        :args (s/cat :environment ::environment
-                     :topic ::topic)
-        :ret (s/coll-of nat-int?))
+  :args (s/cat :environment ::environment
+               :topic ::topic)
+  :ret (s/coll-of nat-int?))
 
 (defn get-group-offsets
   "Gets the offsets for the specified consumer group on the given topic."
@@ -82,10 +82,10 @@
     (kafka/get-group-offsets client topic-name consumer-group)))
 
 (s/fdef get-group-offsets
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :consumer-group ::consumer-group)
-        :ret ::partition-offsets)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :consumer-group ::consumer-group)
+  :ret ::partition-offsets)
 
 (defn get-offsets-at
   "Gets the offsets for the partitions of a topic at a particular point in time.
@@ -102,10 +102,10 @@
     (kafka/get-offsets-at client topic-name at)))
 
 (s/fdef get-offsets-at
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :at ::offset-at)
-        :ret ::partition-offsets)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :at ::offset-at)
+  :ret ::partition-offsets)
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn get-offset-at
@@ -123,11 +123,11 @@
     (kafka/get-offset-at client topic-name partition at)))
 
 (s/fdef get-offset-at
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :partition nat-int?
-                     :at ::offset-at)
-        :ret nat-int?)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :partition nat-int?
+               :at ::offset-at)
+  :ret nat-int?)
 
 (defn get-topics
   "Lists all topics in alphabetical order."
@@ -136,8 +136,8 @@
     (kafka/get-topics client)))
 
 (s/fdef get-topics
-        :args (s/cat :environment ::environment)
-        :ret (s/coll-of ::non-blank-string))
+  :args (s/cat :environment ::environment)
+  :ret (s/coll-of ::non-blank-string))
 
 (defn get-lag
   "Gets the lag for the specified consumer group on the given topic."
@@ -150,11 +150,11 @@
     (kafka/get-lag client topic-name consumer-group)))
 
 (s/fdef get-lag
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :consumer-group ::consumer-group)
-        :ret (s/or :result (s/keys :req-un [::by-partition ::total])
-                   :no-result #(= % :no-lag-data)))
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :consumer-group ::consumer-group)
+  :ret (s/or :result (s/keys :req-un [::by-partition ::total])
+             :no-result #(= % :no-lag-data)))
 
 (defn set-group-offsets!
   "Sets the group offset on all partitions to the specified value.
@@ -171,11 +171,11 @@
       (kafka/set-group-offsets! client topic-name consumer-group partition-offsets))))
 
 (s/fdef set-group-offsets!
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :consumer-group ::consumer-group
-                     :partition-offsets ::partition-offsets)
-        :ret nil?)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :consumer-group ::consumer-group
+               :partition-offsets ::partition-offsets)
+  :ret nil?)
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn set-group-offset!
@@ -193,12 +193,12 @@
       (kafka/set-group-offset! client topic-name partition consumer-group offset))))
 
 (s/fdef set-group-offset!
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :partition nat-int?
-                     :consumer-group ::consumer-group
-                     :offset ::offset-definition)
-        :ret nil?)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :partition nat-int?
+               :consumer-group ::consumer-group
+               :offset ::offset-definition)
+  :ret nil?)
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn get-kafka-config
@@ -208,9 +208,9 @@
   (->kafka-config @config environment topic))
 
 (s/fdef get-kafka-config
-        :args (s/cat :environment ::environment
-                     :topic ::topic)
-        :ret nil?)
+  :args (s/cat :environment ::environment
+               :topic ::topic)
+  :ret nil?)
 
 (defn consume!
   "Starts a new consumer on the specified topic from the specified point. The 'from'
@@ -231,8 +231,8 @@
                                          :timestamp      (-> (.timestamp cr) t/instant)
                                          :timestamp-type (str (.timestampType cr))
                                          :value          (cond-> (.value cr)
-                                                                 json? (-> (str)
-                                                                           (json/parse-string true)))
+                                                           json? (-> (str)
+                                                                     (json/parse-string true)))
                                          :type           (type (.value cr))})
         ch                     (async/chan)]
     (prn (str "Consumer group: " consumer-group))
@@ -260,10 +260,10 @@
     ch))
 
 (s/fdef consume!
-        :args (s/cat :environment ::environment
-                     :topic ::topic
-                     :from (s/or :offset ::offset-definition
-                                 :partition-offsets (s/coll-of (s/cat :partition ::partition :offset ::offset-definition))))
-        :ret ::channel/channel)
+  :args (s/cat :environment ::environment
+               :topic ::topic
+               :from (s/or :offset ::offset-definition
+                           :partition-offsets (s/coll-of (s/cat :partition ::partition :offset ::offset-definition))))
+  :ret ::channel/channel)
 
 (stest/instrument)

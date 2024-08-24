@@ -104,9 +104,9 @@
   "Selects and merges deserialization config."
   [config environment topic]
   (merge
-    (-> config :deserialization)
-    (-> config :environments environment :deserialization)
-    (-> config (->topic-config environment topic) :deserialization)))
+   (-> config :deserialization)
+   (-> config :environments environment :deserialization)
+   (-> config (->topic-config environment topic) :deserialization)))
 
 (defmacro with-principal
   [principal & body]

@@ -29,8 +29,8 @@
   (let [config   {:environments
                   {:test
                    {:kafka (assoc *kafka-config*
-                             :key.deserializer StringDeserializer
-                             :value.deserializer StringDeserializer)}}}
+                                  :key.deserializer StringDeserializer
+                                  :value.deserializer StringDeserializer)}}}
         topic    (str (UUID/randomUUID))
         messages (generate-random-messages 10)]
     (core/set-config! config)
@@ -38,8 +38,8 @@
 
     ; AND the messages are produced to the topic
     (with-producer StringSerializer StringSerializer
-                   (fn [producer]
-                     (produce! producer topic messages)))
+      (fn [producer]
+        (produce! producer topic messages)))
 
     ; WHEN consumption is started at the beginning of the topic.
     (let [c (core/consume! :test topic :start)

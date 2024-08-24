@@ -110,7 +110,7 @@
    (with-producer (-> *kafka-config*
                       (merge {:key.serializer   key-serializer
                               :value.serializer value-serializer})) f))
-  
+
   ([f]
    (with-producer StringSerializer StringSerializer f)))
 

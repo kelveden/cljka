@@ -21,11 +21,9 @@
   (repeatedly n #(vector (str (UUID/randomUUID))
                          (str (UUID/randomUUID)))))
 
-
 ;------------------------------------------------
 (comment kafka/->topic-name)
 ;------------------------------------------------
-
 
 ; TODO --- START move with ->topic-name
 (deftest ->topic-name-converts-keyword-topic-to-string-from-config
@@ -45,11 +43,9 @@
                                 :topic1))))
 ; TODO --- END
 
-
 ;------------------------------------------------
 (comment kafka/get-partitions)
 ;------------------------------------------------
-
 
 (deftest get-topic-partitions-returns-vector-of-partitions-for-topic
   (let [topic (str (UUID/randomUUID))]
@@ -58,11 +54,9 @@
     (is (= [0 1 2 3 4 5]
            (kafka/get-partitions *kafka-admin-client* topic)))))
 
-
 ;------------------------------------------------
 (comment kafka/get-group-offsets)
 ;------------------------------------------------
-
 
 (deftest can-get-group-offsets-by-topic
   ; GIVEN two topics
@@ -79,9 +73,9 @@
 
     ; WHEN a consumer consumes 5 messages from across both topics
     (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic1 topic2])
-                     (doall (repeatedly 5 #(.poll consumer (Duration/ofSeconds 1))))))
+      (fn [^KafkaConsumer consumer]
+        (.subscribe consumer [topic1 topic2])
+        (doall (repeatedly 5 #(.poll consumer (Duration/ofSeconds 1))))))
 
     (let [group-offsets-topic1 (kafka/get-group-offsets *kafka-admin-client* topic1 consumer-group)
           group-offsets-topic2 (kafka/get-group-offsets *kafka-admin-client* topic2 consumer-group)]
@@ -98,11 +92,9 @@
         consumer-group (str (UUID/randomUUID))]
     (is (= [] (kafka/get-group-offsets *kafka-admin-client* topic consumer-group)))))
 
-
 ;------------------------------------------------
 (comment kafka/get-offsets-at)
 ;------------------------------------------------
-
 
 (deftest can-get-topic-starting-offsets
   ; GIVEN a topic
@@ -162,11 +154,9 @@
             ; THEN the offset will be 1 - i.e. the earliest offset with a timestamp greater than "at"
             (is (= [[0 1]] topic-offsets))))))))
 
-
 ;------------------------------------------------
 (comment kafka/get-offset-at)
 ;------------------------------------------------
-
 
 (deftest can-get-topic-starting-offset
   ; GIVEN a topic
@@ -224,11 +214,9 @@
             ; THEN the offset will be 1 - i.e. the earliest offset with a timestamp greater than "at"
             (is (= 1 topic-offset))))))))
 
-
 ;------------------------------------------------
 (comment kafka/get-lag)
 ;------------------------------------------------
-
 
 (deftest can-get-lag
   ; GIVEN a topic
@@ -242,9 +230,9 @@
 
     ; WHEN a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])
-                     (.poll consumer (Duration/ofSeconds 1))))
+      (fn [^KafkaConsumer consumer]
+        (.subscribe consumer [topic])
+        (.poll consumer (Duration/ofSeconds 1))))
 
     ; THEN the lag is 0
     (is (= {:total 0 :by-partition [[0 0] [1 0] [2 0] [3 0]]}
@@ -262,17 +250,15 @@
 
     ; WHEN a consumer initialises but doesn't actually consume
     (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])))
+      (fn [^KafkaConsumer consumer]
+        (.subscribe consumer [topic])))
 
     ; THEN the lag cannot be calculated because the consumer has not yet started consuming
     (is (= :no-lag-data (kafka/get-lag *kafka-admin-client* topic consumer-group)))))
 
-
 ;------------------------------------------------
 (comment kafka/set-group-offsets!)
 ;------------------------------------------------
-
 
 (deftest can-set-consumer-group-offsets-to-specific-offset
   ; GIVEN a topic
@@ -289,18 +275,16 @@
 
     ; AND a consumer starts consuming
     (with-consumer StringDeserializer StringDeserializer consumer-group
-                   (fn [^KafkaConsumer consumer]
-                     (.subscribe consumer [topic])
+      (fn [^KafkaConsumer consumer]
+        (.subscribe consumer [topic])
 
                      ; THEN only those messages from after the offset are retrieved
-                     (is (= 96 (-> (.poll consumer (Duration/ofSeconds 1))
-                                   (.count))))))))
-
+        (is (= 96 (-> (.poll consumer (Duration/ofSeconds 1))
+                      (.count))))))))
 
 ;------------------------------------------------
 (comment kafka/set-group-offset!)
 ;------------------------------------------------
-
 
 (deftest can-set-consumer-group-offset-to-specific-offset
   ; GIVEN a topic
@@ -322,11 +306,9 @@
       (is (= 3 (first (first offsets))))
       (is (= 10 (second (first offsets)))))))
 
-
 ;------------------------------------------------
 (comment kafka/get-topics)
 ;------------------------------------------------
-
 
 (deftest can-get-topics
   (let [topics (repeatedly 5 #(str (UUID/randomUUID)))]
@@ -334,7 +316,6 @@
 
     (is (subset? (set topics)
                  (set (kafka/get-topics *kafka-admin-client*))))))
-
 
 ;------------------------------------------------
 (comment kafka/start-consumer)

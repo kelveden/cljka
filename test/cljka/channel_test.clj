@@ -207,5 +207,5 @@
 
       ; THEN the last piece of data replaces the existing content in the file sink
       (is-eventually? (not (clojure.string/includes?
-                             (slurp file)
-                             "whatever"))))))
+                            (slurp file)
+                            "whatever"))))))

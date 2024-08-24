@@ -49,7 +49,7 @@
                              p (.partition topic-partition)
                              o (.offset offset-metadata)]
                          (cond-> acc
-                                 (= topic t) (conj [p o]))))
+                           (= topic t) (conj [p o]))))
                      [])
              (vec)
              (sort-kvs))))
