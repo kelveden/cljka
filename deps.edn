@@ -4,13 +4,17 @@
 
   :outdated
   {:extra-deps {com.github.liquidz/antq #_{:clj-kondo/ignore [:deps.edn]}
-                                        {:mvn/version "RELEASE"}}
+                {:mvn/version "RELEASE"}}
    :main-opts  ["-m" "antq.core"]}
 
   :lint
   {:extra-deps {clj-kondo/clj-kondo #_{:clj-kondo/ignore [:deps.edn]}
-                                    {:mvn/version "RELEASE"}}
+                {:mvn/version "RELEASE"}}
    :main-opts  ["-m" "clj-kondo.main" "--lint" "src"]}
+
+  :format
+  {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.12.0"}}
+   :main-opts ["-m" "cljfmt.main" "fix"]}
 
   :test
   {:extra-deps  {lambdaisland/kaocha      {:mvn/version "1.88.1376"}
@@ -24,7 +28,7 @@
    :main-opts  ["-m" "nsorg.cli" "-e" "src" "test"]}
 
   :clj-watson
-  {:extra-deps {io.github.clj-holmes/clj-watson {:git/tag "v5.1.2" :git/sha "ae20e1e"}}
+  {:extra-deps {io.github.clj-holmes/clj-watson {:mv "v5.1.2" :git/sha "ae20e1e"}}
    :main-opts  ["-m" "clj-watson.cli" "scan" "-s" "-f" "-p" "deps.edn"]}
 
   :codox

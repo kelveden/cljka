@@ -14,6 +14,9 @@ lint:
 	@clojure -M:organise-namespaces
 	@clojure -M:lint
 
+format:
+	@clojure -M:format
+
 # Scan dependencies for vulnerabilities
 scan:
 	@clojure -M:clj-watson
